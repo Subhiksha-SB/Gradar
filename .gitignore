@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite / Database
+*.db
+*.sqlite3
+student-report-app/backend/instance/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

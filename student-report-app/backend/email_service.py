@@ -2,6 +2,7 @@ import smtplib
 import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 
 # Subject names — must match order marks are stored
 SUBJECT_NAMES = ["Tamil", "English", "Maths", "Science", "Social Science"]
@@ -57,22 +58,65 @@ def _build_html_body(student: dict) -> str:
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Report Card — {student['name']}</title>
+  <style>
+    @keyframes shine {{
+      0% {{ left: -100%; }}
+      30% {{ left: 150%; }}
+      100% {{ left: 150%; }}
+    }}
+    .brand-logo-container {{
+      position: relative;
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      overflow: hidden;
+      display: inline-block;
+      background: radial-gradient(circle at 40% 40%, rgba(99,179,237,0.15), rgba(15,22,35,0.8));
+      border: 1px solid rgba(255,255,255,0.12);
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(99,179,237,0.25);
+    }}
+    .brand-logo-img {{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }}
+    .shine-sweep {{
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.45) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: skewX(-25deg);
+      animation: shine 3.5s infinite ease-in-out;
+    }}
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#0a0f1e;font-family:'Segoe UI',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#05070f;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0"
-         style="background:#0a0f1e;padding:32px 16px;">
+         style="background:#05070f;padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0"
-             style="background:#111827;border-radius:16px;overflow:hidden;
-                    border:1px solid #1f2937;max-width:600px;width:100%;">
+             style="background:#0c0f1e;border-radius:16px;overflow:hidden;
+                    border:1px solid rgba(255,255,255,0.08);max-width:600px;width:100%;box-shadow: 0 4px 24px rgba(0,0,0,0.4);">
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#1e3a5f,#1a1f3a);
-                     padding:32px 36px;text-align:center;">
-            <div style="font-size:42px;margin-bottom:8px;">🎓</div>
-            <h1 style="margin:0;font-size:22px;font-weight:800;color:#f0f4ff;
-                        letter-spacing:-0.5px;">ReportCard Pro</h1>
+          <td style="background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 50%, #0f1623 100%);
+                     padding:36px 36px;text-align:center;border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <div class="brand-logo-container">
+              <img src="cid:gradar_logo" class="brand-logo-img" alt="Gradar Logo"/>
+              <div class="shine-sweep"></div>
+            </div>
+            <h1 style="margin:0;font-size:24px;font-weight:800;color:#f0f4ff;
+                        letter-spacing:-0.5px;">Gradar</h1>
             <p style="margin:6px 0 0;color:#63b3ed;font-size:13px;font-weight:500;
                        text-transform:uppercase;letter-spacing:1px;">
               Academic Performance Report
@@ -182,9 +226,9 @@ def _build_html_body(student: dict) -> str:
 
         <!-- Footer -->
         <tr>
-          <td style="background:#0d1626;border-top:1px solid #1f2937;padding:20px 36px;text-align:center;">
-            <p style="margin:0;color:#4a5568;font-size:12px;">
-              Sent by <strong style="color:#63b3ed;">ReportCard Pro</strong> &nbsp;·&nbsp; Class Teacher
+          <td style="background:#05070f;border-top:1px solid rgba(255,255,255,0.08);padding:20px 36px;text-align:center;">
+            <p style="margin:0;color:#475569;font-size:12px;">
+              Sent by <strong style="color:#63b3ed;">Gradar</strong> &nbsp;·&nbsp; Class Teacher
             </p>
           </td>
         </tr>
@@ -223,7 +267,7 @@ Here is the academic performance report for {student['name']}:
 We encourage you to discuss these results with your child.
 
 Warm regards,
-Class Teacher (ReportCard Pro)
+Class Teacher (Gradar)
 """
 
 
@@ -253,15 +297,30 @@ def send_report_email(student: dict,
     To  : student['parent_email']
     """
     try:
-        # Build multipart message
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"📊 Report Card — {student['name']} | ReportCard Pro"
-        msg["From"]    = f"ReportCard Pro <{sender_email}>"
+        # Build multipart message (using "related" to support inline logo)
+        msg = MIMEMultipart("related")
+        msg["Subject"] = f"📊 Report Card — {student['name']} | Gradar"
+        msg["From"]    = f"Gradar <{sender_email}>"
         msg["To"]      = student["parent_email"]
 
+        # Create alternative part for plain text & HTML
+        msg_alternative = MIMEMultipart("alternative")
+        msg.attach(msg_alternative)
+
         # Attach plain text first, then HTML (email clients prefer last)
-        msg.attach(MIMEText(_build_plain_text(student), "plain", "utf-8"))
-        msg.attach(MIMEText(_build_html_body(student),  "html",  "utf-8"))
+        msg_alternative.attach(MIMEText(_build_plain_text(student), "plain", "utf-8"))
+        msg_alternative.attach(MIMEText(_build_html_body(student),  "html",  "utf-8"))
+
+        # Attach logo as inline image
+        import os
+        logo_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "gradar-logo.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                img_data = f.read()
+            img = MIMEImage(img_data)
+            img.add_header("Content-ID", "<gradar_logo>")
+            img.add_header("Content-Disposition", "inline", filename="gradar-logo.png")
+            msg.attach(img)
 
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as server:

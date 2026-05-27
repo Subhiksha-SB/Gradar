@@ -73,6 +73,103 @@ body::before {
   z-index: 0;
 }
 
+/* ─── Glowing Neon Background Lines ─── */
+.bg-neon-lines-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-neon-lines {
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.38;
+  display: block;
+}
+
+.neon-line {
+  stroke-linecap: round;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawNeonLine 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards, neonLinePulse 4s ease-in-out infinite alternate;
+}
+
+/* Neon Cyan */
+.neon-line-1 {
+  color: #4fd1c5;
+  animation-delay: 0.1s;
+}
+
+/* Neon Pink/Magenta */
+.neon-line-2 {
+  color: #fc8181;
+  animation-delay: 0.5s;
+}
+
+/* Neon Violet */
+.neon-line-3 {
+  color: #9f7aea;
+  animation-delay: 0.3s;
+}
+
+/* Neon Blue/Light Blue */
+.neon-line-4 {
+  color: #63b3ed;
+  animation-delay: 0.7s;
+}
+
+/* Neon Emerald */
+.neon-line-5 {
+  color: #68d391;
+  animation-delay: 0.9s;
+}
+
+@keyframes drawNeonLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes neonLinePulse {
+  0% {
+    opacity: 0.3;
+    filter: drop-shadow(0 0 2px currentColor) drop-shadow(0 0 6px currentColor);
+  }
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px currentColor);
+  }
+  100% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 10px currentColor);
+  }
+}
+
+/* High-charge shine animation triggered on refresh or actions */
+.bg-neon-lines-container.supercharge .neon-line {
+  animation: drawNeonLine 1.5s cubic-bezier(0.1, 0.9, 0.2, 1) forwards, neonLineSupercharge 1.5s ease-out 1;
+}
+
+@keyframes neonLineSupercharge {
+  0% {
+    opacity: 1;
+    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 30px currentColor) drop-shadow(0 0 50px currentColor);
+    stroke-width: 0.35px;
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 25px currentColor) drop-shadow(0 0 45px currentColor) drop-shadow(0 0 75px currentColor);
+    stroke-width: 0.45px;
+  }
+  100% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 10px currentColor);
+    stroke-width: 0.1px;
+  }
+}
+
 /* ─── Header / Navbar ─── */
 .navbar {
   position: sticky;

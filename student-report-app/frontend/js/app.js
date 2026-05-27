@@ -144,6 +144,10 @@ async function fetchStudents() {
     students = await res.json();
     renderTable();
     fetchSummary();
+
+    // Trigger logo and background neon lines shine animations on load/refresh/data push
+    triggerLogoShine();
+    triggerNeonBgShine();
   } catch {
     toast('error', 'Connection Error', 'Cannot connect to backend. Is Flask running on port 5000?');
   }
@@ -170,6 +174,16 @@ function triggerLogoShine() {
   // Force reflow so the animation restarts
   void logo.offsetWidth;
   logo.classList.add('shine-active');
+}
+
+// ─── Neon Background Shine Effect ─────────────────
+function triggerNeonBgShine() {
+  const bgLines = document.getElementById('bg-neon-lines-wrap');
+  if (!bgLines) return;
+  bgLines.classList.remove('supercharge');
+  // Force reflow so the animation restarts
+  void bgLines.offsetWidth;
+  bgLines.classList.add('supercharge');
 }
 
 // ─── Helpers ──────────────────────────────────────

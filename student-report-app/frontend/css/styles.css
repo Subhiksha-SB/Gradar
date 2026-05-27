@@ -60,19 +60,21 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 4px; }
 
-/* ─── Background Lines Image ─── */
+/* ─── Background Grid Lines ─── */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background:
-    url('bg-lines.png') center / cover no-repeat,
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99,126,234,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(159,122,234,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(99,179,237,0.04) 0%, transparent 70%);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99, 126, 234, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(159, 122, 234, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(99, 179, 237, 0.06) 0%, transparent 70%);
+  background-size: 44px 44px, 44px 44px, 100% 100%, 100% 100%, 100% 100%;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.55;
+  opacity: 1;
 }
 
 /* ─── Header / Navbar ─── */

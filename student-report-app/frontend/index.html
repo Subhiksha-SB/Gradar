@@ -10,18 +10,23 @@
 </head>
 <body>
 
-  <!-- Glowing Background Lines -->
+  <!-- Glowing Neon Background Lines -->
   <div class="bg-neon-lines-container" id="bg-neon-lines-wrap">
     <svg class="bg-neon-lines" viewBox="0 0 1440 900" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Clean white crossing lines — matches reference design -->
-      <line class="neon-line nl-a" x1="0"    y1="0"   x2="1440" y2="520"  />
-      <line class="neon-line nl-b" x1="480"  y1="0"   x2="1440" y2="900"  />
-      <line class="neon-line nl-c" x1="0"    y1="580" x2="1440" y2="320"  />
-      <line class="neon-line nl-d" x1="0"    y1="720" x2="960"  y2="0"    />
-      <line class="neon-line nl-e" x1="200"  y1="900" x2="1440" y2="680"  />
+      <!-- Diagonal laser lines -->
+      <line class="neon-line neon-line-1" x1="-50"  y1="120" x2="1500" y2="420"  stroke="currentColor" stroke-width="1.2" />
+      <line class="neon-line neon-line-2" x1="1500" y1="780" x2="-50"  y2="500"  stroke="currentColor" stroke-width="1.2" />
+      <line class="neon-line neon-line-3" x1="400"  y1="-30" x2="250"  y2="930"  stroke="currentColor" stroke-width="0.8" />
+      <line class="neon-line neon-line-4" x1="1080" y1="-30" x2="1200" y2="930"  stroke="currentColor" stroke-width="0.8" />
+      <line class="neon-line neon-line-5" x1="-50"  y1="800" x2="1500" y2="100"  stroke="currentColor" stroke-width="0.7" />
+      <!-- Softer accent diagonals -->
+      <line class="neon-line neon-line-6" x1="-50"  y1="350" x2="1500" y2="680"  stroke="currentColor" stroke-width="0.5" />
+      <line class="neon-line neon-line-7" x1="700"  y1="-30" x2="740"  y2="930"  stroke="currentColor" stroke-width="0.5" />
+      <!-- Curved arcs for futuristic feel -->
+      <path class="neon-line neon-line-8" d="M -50 600 Q 720 200 1500 650" stroke="currentColor" stroke-width="0.6" />
+      <path class="neon-line neon-line-9" d="M -50 250 Q 500 800 1500 300" stroke="currentColor" stroke-width="0.6" />
     </svg>
   </div>
-
 
   <!-- NAVBAR -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">

@@ -60,105 +60,19 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 4px; }
 
-/* ─── Animated Background ─── */
+/* ─── Background Lines Image ─── */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background:
+    url('bg-lines.png') center / cover no-repeat,
     radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99,126,234,0.08) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 80%, rgba(159,122,234,0.06) 0%, transparent 60%),
     radial-gradient(ellipse 40% 30% at 50% 50%, rgba(99,179,237,0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
-}
-
-/* ─── Glowing Neon Background Lines ─── */
-.bg-neon-lines-container {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.bg-neon-lines {
-  width: 100vw;
-  height: 100vh;
-  display: block;
-}
-
-.neon-line {
-  stroke-linecap: round;
-  fill: none;
-  stroke-dasharray: 3000;
-  stroke-dashoffset: 3000;
-  animation:
-    drawNeonLine 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
-    neonLinePulse 5s ease-in-out 2.5s infinite alternate;
-}
-
-/* ── Individual line colours ── */
-.neon-line-1 { color: #4fd1c5;  animation-delay: 0s;    }   /* Cyan */
-.neon-line-2 { color: #fc8181;  animation-delay: 0.3s;  }   /* Coral */
-.neon-line-3 { color: #9f7aea;  animation-delay: 0.15s; }   /* Violet */
-.neon-line-4 { color: #63b3ed;  animation-delay: 0.45s; }   /* Sky Blue */
-.neon-line-5 { color: #68d391;  animation-delay: 0.6s;  }   /* Emerald */
-.neon-line-6 { color: #f6ad55;  animation-delay: 0.75s; }   /* Amber */
-.neon-line-7 { color: #b794f4;  animation-delay: 0.5s;  }   /* Lavender */
-.neon-line-8 { color: #4fd1c5;  animation-delay: 0.2s;  }   /* Cyan (curve) */
-.neon-line-9 { color: #fc8181;  animation-delay: 0.4s;  }   /* Coral (curve) */
-
-/* ── Draw-in animation ── */
-@keyframes drawNeonLine {
-  to { stroke-dashoffset: 0; }
-}
-
-/* ── Ambient breathing glow ── */
-@keyframes neonLinePulse {
-  0% {
-    opacity: 0.18;
-    filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 8px currentColor);
-  }
-  50% {
-    opacity: 0.45;
-    filter: drop-shadow(0 0 6px currentColor) drop-shadow(0 0 18px currentColor) drop-shadow(0 0 30px currentColor);
-  }
-  100% {
-    opacity: 0.28;
-    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 12px currentColor);
-  }
-}
-
-/* ── Supercharge burst on page load / data refresh ── */
-.bg-neon-lines-container.supercharge .neon-line {
-  animation:
-    drawNeonLine 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards,
-    neonLineSupercharge 1.8s ease-out forwards;
-}
-
-@keyframes neonLineSupercharge {
-  0% {
-    opacity: 1;
-    filter:
-      drop-shadow(0 0 10px currentColor)
-      drop-shadow(0 0 25px currentColor)
-      drop-shadow(0 0 50px currentColor);
-    stroke-width: 2.5;
-  }
-  40% {
-    opacity: 0.9;
-    filter:
-      drop-shadow(0 0 18px currentColor)
-      drop-shadow(0 0 40px currentColor)
-      drop-shadow(0 0 70px currentColor);
-    stroke-width: 3;
-  }
-  100% {
-    opacity: 0.25;
-    filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 12px currentColor);
-    stroke-width: 1;
-  }
+  opacity: 0.55;
 }
 
 /* ─── Header / Navbar ─── */

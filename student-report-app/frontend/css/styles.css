@@ -262,6 +262,11 @@ body::before {
   align-items: start;
 }
 
+.content-grid > aside,
+.content-grid > section {
+  min-width: 0;
+}
+
 /* ─── Cards ─── */
 .card {
   background: var(--bg-card);

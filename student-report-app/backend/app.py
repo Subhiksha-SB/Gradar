@@ -179,6 +179,7 @@ def add_student(current_admin):
     group        = data.get("group")
     if group:
         group = str(group).strip()
+    board        = str(data.get("board", "State Board") or "State Board").strip()
 
     if not name or not parent_email or not marks:
         return jsonify({"error": "name, parent_email and marks are required"}), 400
@@ -193,7 +194,7 @@ def add_student(current_admin):
 
     student = Student(name=name, parent_email=parent_email,
                       total=total, average=average,
-                      grade=grade, group=group)
+                      grade=grade, group=group, board=board)
     student.marks = marks
 
     db.session.add(student)
@@ -338,12 +339,13 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Rank", "Name", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Email Sent"])
+    writer.writerow(["Rank", "Name", "Board", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Email Sent"])
 
     for s in students:
         writer.writerow([
             s.rank,
             s.name,
+            s.board or "State Board",
             s.grade,
             s.group or "—",
             " | ".join(str(m) for m in s.marks),

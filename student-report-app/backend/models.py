@@ -39,6 +39,7 @@ class Student(db.Model):
     email_sent    = db.Column(db.Boolean, default=False)
     grade         = db.Column(db.String(50), nullable=False, default="10")
     group         = db.Column(db.String(100), nullable=True)
+    board         = db.Column(db.String(50), nullable=True, default="State Board")
 
     # ------- marks property (serialize / deserialize) -------
     @property
@@ -61,4 +62,5 @@ class Student(db.Model):
             "email_sent":   self.email_sent,
             "grade":        self.grade,
             "group":        self.group,
+            "board":        self.board or "State Board",
         }

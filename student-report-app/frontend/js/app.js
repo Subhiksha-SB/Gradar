@@ -6,10 +6,12 @@ const API = window.location.hostname === '127.0.0.1' || window.location.hostname
   ? 'http://127.0.0.1:5000/api'
   : '/api';
 
-function getSubjectsForForm(grade, group) {
+function getSubjectsForForm(grade, group, board) {
+  const isCBSE = (board || '').toUpperCase() === 'CBSE';
   if (grade === '11' || grade === '12') {
+    let subjects;
     if (group === 'Biology') {
-      return [
+      subjects = [
         { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
         { id: 'mark-english', name: 'English', icon: '🔠' },
         { id: 'mark-maths', name: 'Maths', icon: '🔢' },
@@ -18,7 +20,7 @@ function getSubjectsForForm(grade, group) {
         { id: 'mark-biology', name: 'Biology', icon: '🌿' },
       ];
     } else if (group === 'Computer') {
-      return [
+      subjects = [
         { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
         { id: 'mark-english', name: 'English', icon: '🔠' },
         { id: 'mark-maths', name: 'Maths', icon: '🔢' },
@@ -27,7 +29,7 @@ function getSubjectsForForm(grade, group) {
         { id: 'mark-computerscience', name: 'Computer Science', icon: '💻' },
       ];
     } else if (group === 'Commerce') {
-      return [
+      subjects = [
         { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
         { id: 'mark-english', name: 'English', icon: '🔠' },
         { id: 'mark-accountancy', name: 'Accountancy', icon: '📈' },
@@ -35,7 +37,19 @@ function getSubjectsForForm(grade, group) {
         { id: 'mark-economics', name: 'Economics', icon: '📊' },
         { id: 'mark-bizmaths-ca', name: 'Business Maths / Computer Application', icon: '🧮' },
       ];
+    } else {
+      subjects = [
+        { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
+        { id: 'mark-english', name: 'English', icon: '🔠' },
+        { id: 'mark-maths', name: 'Maths', icon: '🔢' },
+        { id: 'mark-physics', name: 'Physics', icon: '⚡' },
+        { id: 'mark-chemistry', name: 'Chemistry', icon: '🧪' },
+        { id: 'mark-biology', name: 'Biology', icon: '🌿' },
+      ];
     }
+    // CBSE: remove Tamil / French
+    if (isCBSE) subjects = subjects.filter(s => s.id !== 'mark-tamil-french');
+    return subjects;
   }
   return [
     { id: 'mark-tamil',   name: 'Tamil', icon: '🔤' },
@@ -51,6 +65,7 @@ let currentFormSubjects = [];
 
 function updateFormSubjects() {
   const grade = document.getElementById('student-class').value;
+  const board = document.getElementById('student-board').value;
   const groupSelectWrapper = document.getElementById('group-select-wrapper');
   const group = document.getElementById('student-group').value;
 
@@ -60,7 +75,7 @@ function updateFormSubjects() {
     groupSelectWrapper.style.display = 'none';
   }
 
-  currentFormSubjects = getSubjectsForForm(grade, group);
+  currentFormSubjects = getSubjectsForForm(grade, group, board);
   subjectsGrid.innerHTML = '';
 
   currentFormSubjects.forEach((sub, i) => {
@@ -356,7 +371,7 @@ function renderTable() {
     const parts = filterValue.split('-');
     const fGrade = parts[0];
     const fGroup = parts[1] || null;
-    const activeSubjects = getSubjectsForForm(fGrade, fGroup);
+    const activeSubjects = getSubjectsForForm(fGrade, fGroup, null); // leaderboard shows all
 
     let subjectHeaders = '';
     activeSubjects.forEach(sub => {
@@ -397,9 +412,13 @@ function renderTable() {
     tr.setAttribute('data-id', s.id);
 
     if (filterValue === 'all') {
+      const boardBadgeColor = s.board === 'CBSE'
+        ? 'background:rgba(104,211,145,0.12);color:#68d391;border-color:rgba(104,211,145,0.3);'
+        : 'background:rgba(246,173,85,0.12);color:#f6ad55;border-color:rgba(246,173,85,0.3);';
+      const boardBadge = `<span style="font-size:0.7rem;${boardBadgeColor}border:1px solid;border-radius:10px;padding:1px 7px;font-weight:600;margin-left:4px;">${s.board || 'State Board'}</span>`;
       const classBadge = s.group
-        ? `<span style="font-size:0.75rem;background:rgba(159,122,234,0.12);color:var(--accent-violet);border:1px solid rgba(159,122,234,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade} (${s.group})</span>`
-        : `<span style="font-size:0.75rem;background:rgba(99,179,237,0.12);color:var(--accent-blue);border:1px solid rgba(99,179,237,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade}</span>`;
+        ? `<span style="font-size:0.75rem;background:rgba(159,122,234,0.12);color:var(--accent-violet);border:1px solid rgba(159,122,234,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade} (${s.group})</span>${boardBadge}`
+        : `<span style="font-size:0.75rem;background:rgba(99,179,237,0.12);color:var(--accent-blue);border:1px solid rgba(99,179,237,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade}</span>${boardBadge}`;
 
       const totalMax = s.marks.length * 100;
 
@@ -431,7 +450,7 @@ function renderTable() {
       const parts = filterValue.split('-');
       const fGrade = parts[0];
       const fGroup = parts[1] || null;
-      const activeSubjects = getSubjectsForForm(fGrade, fGroup);
+      const activeSubjects = getSubjectsForForm(fGrade, fGroup, null); // leaderboard shows all
 
       let subjectCells = '';
       activeSubjects.forEach((sub, sIdx) => {
@@ -518,6 +537,7 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   const name  = document.getElementById('student-name').value.trim();
   const email = document.getElementById('parent-email').value.trim();
   const grade = document.getElementById('student-class').value;
+  const board = document.getElementById('student-board').value;
   const group = (grade === '11' || grade === '12') ? document.getElementById('student-group').value : null;
 
   if (!name || !email) { toast('error', 'Missing Fields', 'Name and parent email are required.'); return; }
@@ -538,12 +558,13 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   try {
     const res  = await authFetch(`${API}/students`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, parent_email: email, marks, grade, group }),
+      body: JSON.stringify({ name, parent_email: email, marks, grade, group, board }),
     });
     const data = await res.json();
     if (res.ok) {
       toast('success', 'Student Added', `${name} added to the leaderboard.`);
       document.getElementById('add-student-form').reset();
+      updateFormSubjects();
       fetchStudents();
     } else {
       toast('error', 'Error', data.error || 'Failed to add student.');
@@ -880,6 +901,7 @@ if (logoutBtn) {
 }
 
 // ─── Init ─────────────────────────────────────────
+document.getElementById('student-board').addEventListener('change', updateFormSubjects);
 document.getElementById('student-class').addEventListener('change', updateFormSubjects);
 document.getElementById('student-group').addEventListener('change', updateFormSubjects);
 document.getElementById('filter-class').addEventListener('change', () => { renderTable(); });

@@ -1,6 +1,10 @@
 import csv
 import io
 import os
+import sys
+
+# Ensure backend directory is in sys.path for Vercel serverless imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from functools import wraps
 from flask import Flask, jsonify, request, send_file

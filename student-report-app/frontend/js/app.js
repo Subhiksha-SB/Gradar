@@ -2,7 +2,9 @@
    app.js — Gradar Frontend
    ================================================ */
 
-const API = 'http://127.0.0.1:5000/api';
+const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' || window.location.protocol === 'file:'
+  ? 'http://127.0.0.1:5000/api'
+  : '/api';
 
 const SUBJECTS = [
   { id: 'mark-tamil',   name: 'Tamil' },
@@ -11,6 +13,36 @@ const SUBJECTS = [
   { id: 'mark-science', name: 'Science' },
   { id: 'mark-social',  name: 'Social Science' },
 ];
+
+// ─── Authentication state & helpers ────────────────
+function getToken() {
+  return localStorage.getItem('gradar_admin_token');
+}
+
+function setToken(token) {
+  if (token) localStorage.setItem('gradar_admin_token', token);
+  else localStorage.removeItem('gradar_admin_token');
+}
+
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  options.headers = options.headers || {};
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const res = await fetch(url, options);
+  
+  if (res.status === 401) {
+    const clone = res.clone();
+    const data = await clone.json().catch(() => ({}));
+    if (data.code === 'TOKEN_EXPIRED') {
+      toast('warning', 'Session Expired', 'Your admin session has expired. Please sign in again.');
+    }
+    logoutAdmin();
+  }
+  return res;
+}
 
 // ─── Credentials state ────────────────────────────
 let creds = { email: '', password: '', verified: false };
@@ -76,7 +108,7 @@ testCredsBtn.addEventListener('click', async () => {
   testCredsBtn.disabled = true;
 
   try {
-    const res  = await fetch(`${API}/verify-credentials`, {
+    const res  = await authFetch(`${API}/verify-credentials`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ sender_email: email, sender_password: pass }),
@@ -140,7 +172,7 @@ function requireCreds() {
 // ─── Fetch students ───────────────────────────────
 async function fetchStudents() {
   try {
-    const res = await fetch(`${API}/students`);
+    const res = await authFetch(`${API}/students`);
     students = await res.json();
     renderTable();
     fetchSummary();
@@ -156,7 +188,7 @@ async function fetchStudents() {
 // ─── Fetch summary ────────────────────────────────
 async function fetchSummary() {
   try {
-    const res  = await fetch(`${API}/summary`);
+    const res  = await authFetch(`${API}/summary`);
     const data = await res.json();
     document.getElementById('stat-total').textContent   = data.total_students;
     document.getElementById('stat-avg').textContent     = data.class_average ? `${data.class_average}%` : '—';
@@ -326,7 +358,7 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
-    const res  = await fetch(`${API}/students`, {
+    const res  = await authFetch(`${API}/students`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, parent_email: email, marks }),
     });
@@ -398,7 +430,7 @@ document.getElementById('del-confirm-btn').addEventListener('click', async () =>
   btn.classList.add('loading'); btn.disabled = true;
 
   try {
-    const res = await fetch(`${API}/students/${pendingDeleteId}`, { method: 'DELETE' });
+    const res = await authFetch(`${API}/students/${pendingDeleteId}`, { method: 'DELETE' });
     if (res.ok) {
       toast('success', 'Record Deleted', `${pendingDeleteName}'s record has been removed.`);
       closeDeleteModal();
@@ -434,7 +466,7 @@ document.getElementById('del-all-confirm-btn').addEventListener('click', async (
   let deleted = 0;
   for (const id of ids) {
     try {
-      const res = await fetch(`${API}/students/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`${API}/students/${id}`, { method: 'DELETE' });
       if (res.ok) deleted++;
     } catch { /* continue */ }
   }
@@ -465,7 +497,7 @@ async function sendSingleEmail(id, name, parentEmail) {
   toast('info', 'Sending…', `Sending report card to ${parentEmail}`);
 
   try {
-    const res  = await fetch(`${API}/send-email/${id}`, {
+    const res  = await authFetch(`${API}/send-email/${id}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ sender_email: cr.email, sender_password: cr.pass }),
@@ -499,7 +531,7 @@ document.getElementById('send-all-btn').addEventListener('click', async () => {
   emailResultsLog.innerHTML = '';
 
   try {
-    const res  = await fetch(`${API}/send-emails`, {
+    const res  = await authFetch(`${API}/send-emails`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ sender_email: cr.email, sender_password: cr.pass }),
@@ -547,9 +579,124 @@ teacherModal.addEventListener('click', e => {
 // ─── Export CSV ───────────────────────────────────
 document.getElementById('export-csv-btn').addEventListener('click', () => {
   if (!students.length) { toast('info', 'No Data', 'Add students before exporting.'); return; }
-  window.location.href = `${API}/export-csv`;
+  window.location.href = `${API}/export-csv?token=${encodeURIComponent(getToken() || '')}`;
   toast('success', 'Downloading', 'CSV file is being downloaded.');
 });
 
+// ─── Admin Authentication handlers ────────────────
+async function checkAuthOnLoad() {
+  const token = getToken();
+  if (!token) {
+    showLoginScreen();
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      loginAdminSuccess(data.admin);
+    } else {
+      logoutAdmin();
+    }
+  } catch {
+    showLoginScreen();
+  }
+}
+
+function showLoginScreen() {
+  const loginOverlay = document.getElementById('login-screen-overlay');
+  if (loginOverlay) loginOverlay.classList.add('active');
+  
+  // Hide authenticated elements
+  document.getElementById('nav-admin-profile').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+}
+
+function loginAdminSuccess(admin) {
+  const loginOverlay = document.getElementById('login-screen-overlay');
+  if (loginOverlay) loginOverlay.classList.remove('active');
+  
+  // Show admin UI info
+  const profile = document.getElementById('nav-admin-profile');
+  const logout = document.getElementById('logout-btn');
+  const nameEl = document.getElementById('admin-name');
+  const avatarEl = document.getElementById('admin-avatar');
+  
+  if (profile) profile.style.display = 'flex';
+  if (logout) logout.style.display = 'inline-flex';
+  if (nameEl) nameEl.textContent = admin.username;
+  if (avatarEl) avatarEl.textContent = admin.username.charAt(0).toUpperCase();
+  
+  // Fetch dashboard data
+  fetchStudents();
+}
+
+function logoutAdmin() {
+  setToken(null);
+  showLoginScreen();
+  // Clear lists
+  students = [];
+  renderTable();
+}
+
+// ─── Login Form Submit ────────────────────────────
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    
+    if (!username || !password) return;
+    
+    errEl.style.display = 'none';
+    btn.classList.add('loading');
+    btn.disabled = true;
+    
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setToken(data.token);
+        loginAdminSuccess(data.admin);
+        toast('success', 'Welcome Back!', `Signed in successfully as ${data.admin.username}.`);
+        document.getElementById('login-form').reset();
+      } else {
+        errEl.textContent = data.error || 'Invalid credentials.';
+        errEl.style.display = 'flex';
+        // shake effect
+        errEl.style.animation = 'none';
+        void errEl.offsetHeight; // force reflow
+        errEl.style.animation = '';
+      }
+    } catch {
+      errEl.textContent = 'Server connection failed. Is Flask running?';
+      errEl.style.display = 'flex';
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  });
+}
+
+// ─── Logout Button Click ──────────────────────────
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    logoutAdmin();
+    toast('info', 'Signed Out', 'You have been successfully signed out.');
+  });
+}
+
 // ─── Init ─────────────────────────────────────────
-fetchStudents();
+checkAuthOnLoad();

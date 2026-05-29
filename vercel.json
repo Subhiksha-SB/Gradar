@@ -2,25 +2,25 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/app.py",
+      "src": "student-report-app/backend/app.py",
       "use": "@vercel/python"
     },
     {
-      "src": "frontend/**",
+      "src": "student-report-app/frontend/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/app.py"
+      "dest": "student-report-app/backend/app.py"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "student-report-app/frontend/$1"
     }
   ]
 }

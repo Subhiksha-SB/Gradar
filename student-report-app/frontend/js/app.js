@@ -6,13 +6,89 @@ const API = window.location.hostname === '127.0.0.1' || window.location.hostname
   ? 'http://127.0.0.1:5000/api'
   : '/api';
 
-const SUBJECTS = [
-  { id: 'mark-tamil',   name: 'Tamil' },
-  { id: 'mark-english', name: 'English' },
-  { id: 'mark-maths',   name: 'Maths' },
-  { id: 'mark-science', name: 'Science' },
-  { id: 'mark-social',  name: 'Social Science' },
-];
+function getSubjectsForForm(grade, group) {
+  if (grade === '11' || grade === '12') {
+    if (group === 'Biology') {
+      return [
+        { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
+        { id: 'mark-english', name: 'English', icon: '🔠' },
+        { id: 'mark-maths', name: 'Maths', icon: '🔢' },
+        { id: 'mark-physics', name: 'Physics', icon: '⚡' },
+        { id: 'mark-chemistry', name: 'Chemistry', icon: '🧪' },
+        { id: 'mark-biology', name: 'Biology', icon: '🌿' },
+      ];
+    } else if (group === 'Computer') {
+      return [
+        { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
+        { id: 'mark-english', name: 'English', icon: '🔠' },
+        { id: 'mark-maths', name: 'Maths', icon: '🔢' },
+        { id: 'mark-physics', name: 'Physics', icon: '⚡' },
+        { id: 'mark-chemistry', name: 'Chemistry', icon: '🧪' },
+        { id: 'mark-computerscience', name: 'Computer Science', icon: '💻' },
+      ];
+    } else if (group === 'Commerce') {
+      return [
+        { id: 'mark-tamil-french', name: 'Tamil / French', icon: '🔤' },
+        { id: 'mark-english', name: 'English', icon: '🔠' },
+        { id: 'mark-accountancy', name: 'Accountancy', icon: '📈' },
+        { id: 'mark-commerce', name: 'Commerce', icon: '💼' },
+        { id: 'mark-economics', name: 'Economics', icon: '📊' },
+        { id: 'mark-bizmaths-ca', name: 'Business Maths / Computer Application', icon: '🧮' },
+      ];
+    }
+  }
+  return [
+    { id: 'mark-tamil',   name: 'Tamil', icon: '🔤' },
+    { id: 'mark-english', name: 'English', icon: '🔠' },
+    { id: 'mark-maths',   name: 'Maths', icon: '🔢' },
+    { id: 'mark-science', name: 'Science', icon: '🔬' },
+    { id: 'mark-social',  name: 'Social Science', icon: '🌍' },
+  ];
+}
+
+const subjectsGrid = document.querySelector('.subjects-grid');
+let currentFormSubjects = [];
+
+function updateFormSubjects() {
+  const grade = document.getElementById('student-class').value;
+  const groupSelectWrapper = document.getElementById('group-select-wrapper');
+  const group = document.getElementById('student-group').value;
+
+  if (grade === '11' || grade === '12') {
+    groupSelectWrapper.style.display = 'block';
+  } else {
+    groupSelectWrapper.style.display = 'none';
+  }
+
+  currentFormSubjects = getSubjectsForForm(grade, group);
+  subjectsGrid.innerHTML = '';
+
+  currentFormSubjects.forEach((sub, i) => {
+    const isFull = currentFormSubjects.length % 2 !== 0 && i === currentFormSubjects.length - 1;
+    const fullClass = isFull ? 'subject-field subject-field--full' : 'subject-field';
+
+    const div = document.createElement('div');
+    div.className = fullClass;
+    div.innerHTML = `
+      <div class="subject-header">
+        <span class="subject-icon">${sub.icon}</span>
+        <label for="${sub.id}">${sub.name}</label>
+      </div>
+      <input type="number" id="${sub.id}" class="subject-input"
+             placeholder="0–100" min="0" max="100" step="1" required />
+    `;
+    subjectsGrid.appendChild(div);
+  });
+
+  document.querySelectorAll('.subject-input').forEach((el, i, all) => {
+    el.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        (all[i + 1] || document.getElementById('add-btn')).focus();
+      }
+    });
+  });
+}
 
 // ─── Authentication state & helpers ────────────────
 function getToken() {
@@ -236,16 +312,73 @@ function avgClass(avg) {
 
 // ─── Render table ─────────────────────────────────
 function renderTable() {
-  if (!students.length) {
+  const filterValue = document.getElementById('filter-class').value;
+  let filteredStudents = students;
+
+  if (filterValue !== 'all') {
+    const parts = filterValue.split('-');
+    const fGrade = parts[0];
+    const fGroup = parts[1] || null;
+
+    filteredStudents = students.filter(s => {
+      if (fGroup) {
+        return s.grade === fGrade && s.group === fGroup;
+      } else {
+        return s.grade === fGrade && !s.group;
+      }
+    });
+  }
+
+  if (!filteredStudents.length) {
     emptyState.classList.remove('hidden');
     tableWrapper.classList.add('hidden');
     return;
   }
   emptyState.classList.add('hidden');
   tableWrapper.classList.remove('hidden');
+
+  const table = tableWrapper.querySelector('table');
+  const thead = table.querySelector('thead');
+
+  if (filterValue === 'all') {
+    thead.innerHTML = `
+      <tr>
+        <th class="text-center">Rank</th>
+        <th>Student</th>
+        <th class="text-center">Class / Group</th>
+        <th class="text-center">Total Score</th>
+        <th class="text-center">Average</th>
+        <th class="text-center">Email Status</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    `;
+  } else {
+    const parts = filterValue.split('-');
+    const fGrade = parts[0];
+    const fGroup = parts[1] || null;
+    const activeSubjects = getSubjectsForForm(fGrade, fGroup);
+
+    let subjectHeaders = '';
+    activeSubjects.forEach(sub => {
+      subjectHeaders += `<th class="text-center">${sub.icon} ${sub.name.split(' / ')[0]}</th>`;
+    });
+
+    thead.innerHTML = `
+      <tr>
+        <th class="text-center">Rank</th>
+        <th>Student</th>
+        ${subjectHeaders}
+        <th class="text-center">Total</th>
+        <th class="text-center">Average</th>
+        <th class="text-center">Email Status</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    `;
+  }
+
   studentsBody.innerHTML = '';
 
-  students.forEach(s => {
+  filteredStudents.forEach(s => {
     const rankClass  = s.rank <= 3 ? `rank-${s.rank}` : 'rank-other';
     const rankLabel  = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : s.rank;
     const emailBadge = s.email_sent
@@ -262,40 +395,82 @@ function renderTable() {
 
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', s.id);
-    tr.innerHTML = `
-      <td class="text-center"><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
-      <td>
-        <div style="font-weight:600;color:var(--text-primary)">${esc(s.name)}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${esc(s.parent_email)}</div>
-      </td>
-      <td class="text-center"><span class="subject-cell ${subjectClass(s.marks[0])}">${s.marks[0] ?? '—'}</span></td>
-      <td class="text-center"><span class="subject-cell ${subjectClass(s.marks[1])}">${s.marks[1] ?? '—'}</span></td>
-      <td class="text-center"><span class="subject-cell ${subjectClass(s.marks[2])}">${s.marks[2] ?? '—'}</span></td>
-      <td class="text-center"><span class="subject-cell ${subjectClass(s.marks[3])}">${s.marks[3] ?? '—'}</span></td>
-      <td class="text-center"><span class="subject-cell ${subjectClass(s.marks[4])}">${s.marks[4] ?? '—'}</span></td>
-      <td class="text-center" style="font-family:var(--font-mono);font-weight:700">${s.total}</td>
-      <td class="text-center"><span class="avg-badge ${avgClass(s.average)}">${s.average}%</span></td>
-      <td class="text-center">${emailBadge}</td>
-      <td class="text-center">
-        <div class="action-cell" style="justify-content: center;">
-          <button class="${sendBtnClass}" id="send-btn-${s.id}"
-            onclick="sendSingleEmail(${s.id},'${esc(s.name)}','${esc(s.parent_email)}')"
-            title="Send report card to ${esc(s.parent_email)}">
-            ${sendLabel}
-          </button>
-          <button class="btn btn-danger btn-sm"
-            onclick="deleteStudent(${s.id},'${esc(s.name)}','${esc(s.parent_email)}',${marksJson},${s.total},${s.average})"
-            title="Delete ${esc(s.name)}'s record">
-            🗑️ Delete
-          </button>
-        </div>
-      </td>`;
+
+    if (filterValue === 'all') {
+      const classBadge = s.group
+        ? `<span style="font-size:0.75rem;background:rgba(159,122,234,0.12);color:var(--accent-violet);border:1px solid rgba(159,122,234,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade} (${s.group})</span>`
+        : `<span style="font-size:0.75rem;background:rgba(99,179,237,0.12);color:var(--accent-blue);border:1px solid rgba(99,179,237,0.25);border-radius:12px;padding:2px 8px;font-weight:600;">Class ${s.grade}</span>`;
+
+      const totalMax = s.marks.length * 100;
+
+      tr.innerHTML = `
+        <td class="text-center"><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
+        <td>
+          <div style="font-weight:600;color:var(--text-primary)">${esc(s.name)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${esc(s.parent_email)}</div>
+        </td>
+        <td class="text-center">${classBadge}</td>
+        <td class="text-center" style="font-family:var(--font-mono);font-weight:700">${s.total} / ${totalMax}</td>
+        <td class="text-center"><span class="avg-badge ${avgClass(s.average)}">${s.average}%</span></td>
+        <td class="text-center">${emailBadge}</td>
+        <td class="text-center">
+          <div class="action-cell" style="justify-content: center;">
+            <button class="${sendBtnClass}" id="send-btn-${s.id}"
+              onclick="sendSingleEmail(${s.id},'${esc(s.name)}','${esc(s.parent_email)}')"
+              title="Send report card to ${esc(s.parent_email)}">
+              ${sendLabel}
+            </button>
+            <button class="btn btn-danger btn-sm"
+              onclick="deleteStudent(${s.id},'${esc(s.name)}','${esc(s.parent_email)}',${marksJson},${s.total},${s.average},'${s.grade}','${s.group||''}')"
+              title="Delete ${esc(s.name)}'s record">
+              🗑️ Delete
+            </button>
+          </div>
+        </td>`;
+    } else {
+      const parts = filterValue.split('-');
+      const fGrade = parts[0];
+      const fGroup = parts[1] || null;
+      const activeSubjects = getSubjectsForForm(fGrade, fGroup);
+
+      let subjectCells = '';
+      activeSubjects.forEach((sub, sIdx) => {
+        const markVal = s.marks[sIdx] ?? '—';
+        const cellClass = s.marks[sIdx] !== undefined ? subjectClass(s.marks[sIdx]) : 'low';
+        subjectCells += `<td class="text-center"><span class="subject-cell ${cellClass}">${markVal}</span></td>`;
+      });
+
+      tr.innerHTML = `
+        <td class="text-center"><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
+        <td>
+          <div style="font-weight:600;color:var(--text-primary)">${esc(s.name)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${esc(s.parent_email)}</div>
+        </td>
+        ${subjectCells}
+        <td class="text-center" style="font-family:var(--font-mono);font-weight:700">${s.total}</td>
+        <td class="text-center"><span class="avg-badge ${avgClass(s.average)}">${s.average}%</span></td>
+        <td class="text-center">${emailBadge}</td>
+        <td class="text-center">
+          <div class="action-cell" style="justify-content: center;">
+            <button class="${sendBtnClass}" id="send-btn-${s.id}"
+              onclick="sendSingleEmail(${s.id},'${esc(s.name)}','${esc(s.parent_email)}')"
+              title="Send report card to ${esc(s.parent_email)}">
+              ${sendLabel}
+            </button>
+            <button class="btn btn-danger btn-sm"
+              onclick="deleteStudent(${s.id},'${esc(s.name)}','${esc(s.parent_email)}',${marksJson},${s.total},${s.average},'${s.grade}','${s.group||''}')"
+              title="Delete ${esc(s.name)}'s record">
+              🗑️ Delete
+            </button>
+          </div>
+        </td>`;
+    }
     studentsBody.appendChild(tr);
   });
 
   // Show / hide Delete All button
   const delAllBtn = document.getElementById('delete-all-btn');
-  if (students.length > 0) delAllBtn.classList.remove('hidden');
+  if (filteredStudents.length > 0) delAllBtn.classList.remove('hidden');
   else delAllBtn.classList.add('hidden');
 }
 
@@ -342,10 +517,13 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   e.preventDefault();
   const name  = document.getElementById('student-name').value.trim();
   const email = document.getElementById('parent-email').value.trim();
+  const grade = document.getElementById('student-class').value;
+  const group = (grade === '11' || grade === '12') ? document.getElementById('student-group').value : null;
+
   if (!name || !email) { toast('error', 'Missing Fields', 'Name and parent email are required.'); return; }
 
-  const marks   = SUBJECTS.map(s => parseInt(document.getElementById(s.id).value, 10));
-  const missing = SUBJECTS.filter((_, i) => isNaN(marks[i]));
+  const marks   = currentFormSubjects.map(s => parseInt(document.getElementById(s.id).value, 10));
+  const missing = currentFormSubjects.filter((_, i) => isNaN(marks[i]));
   if (missing.length) {
     toast('error', 'Missing Marks', `Enter marks for: ${missing.map(s => s.name).join(', ')}`);
     return;
@@ -360,7 +538,7 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   try {
     const res  = await authFetch(`${API}/students`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, parent_email: email, marks }),
+      body: JSON.stringify({ name, parent_email: email, marks, grade, group }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -391,7 +569,7 @@ let pendingDeleteName = '';
 const deleteModal    = document.getElementById('delete-modal-overlay');
 const deleteAllModal = document.getElementById('delete-all-modal-overlay');
 
-function openDeleteModal(id, name, email, marks, total, avg) {
+function openDeleteModal(id, name, email, marks, total, avg, grade, group) {
   pendingDeleteId   = id;
   pendingDeleteName = name;
 
@@ -400,8 +578,11 @@ function openDeleteModal(id, name, email, marks, total, avg) {
   document.getElementById('del-name').textContent   = name;
   document.getElementById('del-email').textContent  = email;
 
-  const subjectLabels = ['Tamil','English','Maths','Science','Social'];
-  const markStr = (marks || []).map((m, i) => `${subjectLabels[i]}: ${m}`).join('  |  ');
+  const activeSubjects = getSubjectsForForm(grade || '10', group || null);
+  const markStr = (marks || []).map((m, i) => {
+    const subName = activeSubjects[i] ? activeSubjects[i].name : 'Subject';
+    return `${subName}: ${m}`;
+  }).join('  |  ');
   document.getElementById('del-marks').textContent =
     `${markStr}  ·  Total: ${total}  ·  Avg: ${avg}%`;
 
@@ -478,8 +659,8 @@ document.getElementById('del-all-confirm-btn').addEventListener('click', async (
 });
 
 // ─── Delete single student (opens modal) ─────────
-function deleteStudent(id, name, email, marks, total, avg) {
-  openDeleteModal(id, name, email, marks, total, avg);
+function deleteStudent(id, name, email, marks, total, avg, grade, group) {
+  openDeleteModal(id, name, email, marks, total, avg, grade, group);
 }
 
 // ─── Send email to ONE student ────────────────────
@@ -699,4 +880,8 @@ if (logoutBtn) {
 }
 
 // ─── Init ─────────────────────────────────────────
+document.getElementById('student-class').addEventListener('change', updateFormSubjects);
+document.getElementById('student-group').addEventListener('change', updateFormSubjects);
+document.getElementById('filter-class').addEventListener('change', () => { renderTable(); });
+updateFormSubjects();
 checkAuthOnLoad();

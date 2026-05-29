@@ -329,6 +329,7 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="number"],
+select,
 textarea {
   width: 100%;
   background: rgba(255,255,255,0.05);
@@ -342,10 +343,16 @@ textarea {
   outline: none;
 }
 
+select option {
+  background: #0c0f1e;
+  color: var(--text-primary);
+}
+
 input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
+select:focus,
 textarea:focus {
   border-color: var(--accent-blue);
   background: rgba(99,179,237,0.07);

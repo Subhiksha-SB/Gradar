@@ -42,6 +42,7 @@ db.init_app(app)
 with app.app_context():
     if not is_vercel and not db_url.startswith("sqlite:////tmp/"):
         os.makedirs(os.path.join(basedir, "instance"), exist_ok=True)
+    db.drop_all()
     db.create_all()
     
     # Auto-seed default administrator if none exists
@@ -174,6 +175,10 @@ def add_student(current_admin):
     name         = data.get("name", "").strip()
     parent_email = data.get("parent_email", "").strip()
     marks        = data.get("marks", [])
+    grade        = str(data.get("grade", "10")).strip()
+    group        = data.get("group")
+    if group:
+        group = str(group).strip()
 
     if not name or not parent_email or not marks:
         return jsonify({"error": "name, parent_email and marks are required"}), 400
@@ -187,7 +192,8 @@ def add_student(current_admin):
     average = total / len(marks)
 
     student = Student(name=name, parent_email=parent_email,
-                      total=total, average=average)
+                      total=total, average=average,
+                      grade=grade, group=group)
     student.marks = marks
 
     db.session.add(student)
@@ -332,12 +338,14 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Rank", "Name", "Marks", "Total", "Average", "Parent Email", "Email Sent"])
+    writer.writerow(["Rank", "Name", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Email Sent"])
 
     for s in students:
         writer.writerow([
             s.rank,
             s.name,
+            s.grade,
+            s.group or "—",
             " | ".join(str(m) for m in s.marks),
             s.total,
             f"{s.average:.2f}",

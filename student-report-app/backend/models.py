@@ -37,6 +37,8 @@ class Student(db.Model):
     average       = db.Column(db.Float, nullable=False)
     rank          = db.Column(db.Integer, nullable=True)
     email_sent    = db.Column(db.Boolean, default=False)
+    grade         = db.Column(db.String(50), nullable=False, default="10")
+    group         = db.Column(db.String(100), nullable=True)
 
     # ------- marks property (serialize / deserialize) -------
     @property
@@ -57,4 +59,6 @@ class Student(db.Model):
             "average":      round(self.average, 2),
             "rank":         self.rank,
             "email_sent":   self.email_sent,
+            "grade":        self.grade,
+            "group":        self.group,
         }

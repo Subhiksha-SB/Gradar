@@ -4,9 +4,25 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-# Subject names — must match order marks are stored
-SUBJECT_NAMES = ["Tamil", "English", "Maths", "Science", "Social Science"]
-SUBJECT_ICONS = ["📖", "📝", "🔢", "🔬", "🌍"]
+def get_subjects_for_class(grade: str, group: str = None) -> list:
+    if grade in ["11", "12"]:
+        if group == "Biology":
+            return ["Tamil / French", "English", "Maths", "Physics", "Chemistry", "Biology"]
+        elif group == "Computer":
+            return ["Tamil / French", "English", "Maths", "Physics", "Chemistry", "Computer Science"]
+        elif group == "Commerce":
+            return ["Tamil / French", "English", "Accountancy", "Commerce", "Economics", "Business Maths / Computer Application"]
+    return ["Tamil", "English", "Maths", "Science", "Social Science"]
+
+def get_icons_for_class(grade: str, group: str = None) -> list:
+    if grade in ["11", "12"]:
+        if group == "Biology":
+            return ["🔤", "🔠", "🔢", "⚡", "🧪", "🌿"]
+        elif group == "Computer":
+            return ["🔤", "🔠", "🔢", "⚡", "🧪", "💻"]
+        elif group == "Commerce":
+            return ["🔤", "🔠", "📈", "💼", "📊", "🧮"]
+    return ["🔤", "🔠", "🔢", "🔬", "🌍"]
 
 
 def _grade_label(avg: float) -> str:
@@ -33,8 +49,10 @@ def _build_html_body(student: dict) -> str:
     )
 
     # Build subject rows
+    subjects = get_subjects_for_class(student.get("grade"), student.get("group"))
+    icons = get_icons_for_class(student.get("grade"), student.get("group"))
     subject_rows = ""
-    for name, icon, mark in zip(SUBJECT_NAMES, SUBJECT_ICONS, marks):
+    for name, icon, mark in zip(subjects, icons, marks):
         pct   = mark  # out of 100
         s_clr = "#48bb78" if pct >= 75 else "#f6ad55" if pct >= 50 else "#fc8181"
         subject_rows += f"""
@@ -244,9 +262,10 @@ def _build_plain_text(student: dict) -> str:
     """Plain-text fallback."""
     marks     = student["marks"]
     total_max = len(marks) * 100
+    subjects  = get_subjects_for_class(student.get("grade"), student.get("group"))
     lines     = "\n".join(
         f"  {name:<18}: {mark:>3} / 100"
-        for name, mark in zip(SUBJECT_NAMES, marks)
+        for name, mark in zip(subjects, marks)
     )
     divider = "  " + "-" * 28
     return f"""\
@@ -299,7 +318,10 @@ def send_report_email(student: dict,
     try:
         # Build multipart message (using "related" to support inline logo)
         msg = MIMEMultipart("related")
-        msg["Subject"] = f"📊 Report Card — {student['name']} | AcaTier"
+        class_lbl = f"Class {student.get('grade', '10')}"
+        if student.get("group"):
+            class_lbl += f" ({student.get('group')} Group)"
+        msg["Subject"] = f"📊 Report Card — {student['name']} | {class_lbl} | AcaTier"
         msg["From"]    = f"AcaTier <{sender_email}>"
         msg["To"]      = student["parent_email"]
 

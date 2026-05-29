@@ -2,7 +2,25 @@ import csv
 import smtplib
 from email.message import EmailMessage
 
-SUBJECTS = ["Tamil", "English", "Maths", "Science", "Social Science"]
+def get_subjects_for_class(grade: str, group: str = None) -> list:
+    if grade in ["11", "12"]:
+        if group == "Biology":
+            return ["Tamil / French", "English", "Maths", "Physics", "Chemistry", "Biology"]
+        elif group == "Computer":
+            return ["Tamil / French", "English", "Maths", "Physics", "Chemistry", "Computer Science"]
+        elif group == "Commerce":
+            return ["Tamil / French", "English", "Accountancy", "Commerce", "Economics", "Business Maths / Computer Application"]
+    return ["Tamil", "English", "Maths", "Science", "Social Science"]
+
+def get_icons_for_class(grade: str, group: str = None) -> list:
+    if grade in ["11", "12"]:
+        if group == "Biology":
+            return ["🔤", "🔠", "🔢", "⚡", "🧪", "🌿"]
+        elif group == "Computer":
+            return ["🔤", "🔠", "🔢", "⚡", "🧪", "💻"]
+        elif group == "Commerce":
+            return ["🔤", "🔠", "📈", "💼", "📊", "🧮"]
+    return ["🔤", "🔠", "🔢", "🔬", "🌍"]
 
 def get_student_data():
     students = []
@@ -24,9 +42,35 @@ def get_student_data():
         parent_email = input("Parent Email: ").strip()
         while "@" not in parent_email or "." not in parent_email:
             parent_email = input("Invalid email. Enter Parent Email: ").strip()
+
+        while True:
+            grade = input("Class / Grade (1-12): ").strip()
+            if grade.isdigit() and 1 <= int(grade) <= 12:
+                break
+            print("Invalid Class. Please enter a number between 1 and 12.")
+
+        group = None
+        if grade in ["11", "12"]:
+            while True:
+                print("Select Group:")
+                print("1. Biology Group")
+                print("2. Computer Group")
+                print("3. Commerce Group")
+                gp_choice = input("Enter choice (1-3): ").strip()
+                if gp_choice == "1":
+                    group = "Biology"
+                    break
+                elif gp_choice == "2":
+                    group = "Computer"
+                    break
+                elif gp_choice == "3":
+                    group = "Commerce"
+                    break
+                print("Invalid choice. Please enter 1, 2, or 3.")
         
+        active_subs = get_subjects_for_class(grade, group)
         marks = []
-        for sub in SUBJECTS:
+        for sub in active_subs:
             while True:
                 try:
                     mark = int(input(f"  Enter marks for {sub} (0-100): "))
@@ -45,7 +89,9 @@ def get_student_data():
             "parent_email": parent_email,
             "marks": marks,
             "total": total,
-            "average": avg
+            "average": avg,
+            "grade": grade,
+            "group": group
         })
 
     return students
@@ -57,13 +103,23 @@ def assign_ranks(students):
     return sorted_students
 
 def display_results(students):
-    print("\n" + "="*85)
-    print(f"{'Rank':<6}{'Name':<20}{'Tamil':<8}{'English':<8}{'Maths':<8}{'Science':<8}{'Social':<8}{'Total':<8}{'Average':<8}")
-    print("="*85)
+    print("\n" + "="*95)
+    print(f"{'Rank':<6}{'Name':<20}{'Class/Group':<25}{'Total Score':<15}{'Average':<10}")
+    print("="*95)
     for s in students:
-        marks = s["marks"]
-        print(f"#{s['rank']:<5}{s['name']:<20}{marks[0]:<8}{marks[1]:<8}{marks[2]:<8}{marks[3]:<8}{marks[4]:<8}{s['total']:<8}{s['average']:<8.2f}")
-    print("="*85)
+        class_str = f"Class {s.get('grade', '10')}"
+        if s.get('group'):
+            class_str += f" ({s.get('group')})"
+        
+        total_max = len(s['marks']) * 100
+        total_str = f"{s['total']} / {total_max}"
+        
+        print(f"#{s['rank']:<5}{s['name']:<20}{class_str:<25}{total_str:<15}{s['average']:<10.2f}%")
+        
+        active_subs = get_subjects_for_class(s.get('grade', '10'), s.get('group'))
+        sub_marks_str = ", ".join(f"{sub}: {mark}" for sub, mark in zip(active_subs, s['marks']))
+        print(f"      📚 Marks: {sub_marks_str}")
+        print("-"*95)
 
 def class_summary(students):
     print("\n--- Class Summary ---")
@@ -86,16 +142,14 @@ def class_summary(students):
 def save_to_csv(students, filename="results.csv"):
     with open(filename, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Rank", "Name", "Tamil", "English", "Maths", "Science", "Social Science", "Total", "Average", "Parent Email"])
+        writer.writerow(["Rank", "Name", "Class", "Group", "Marks", "Total", "Average", "Parent Email"])
         for s in students:
             writer.writerow([
                 s['rank'],
                 s['name'],
-                s['marks'][0],
-                s['marks'][1],
-                s['marks'][2],
-                s['marks'][3],
-                s['marks'][4],
+                s.get('grade', '10'),
+                s.get('group', '—'),
+                " | ".join(str(m) for m in s['marks']),
                 s['total'],
                 f"{s['average']:.2f}",
                 s['parent_email']
@@ -121,9 +175,10 @@ def send_emails(students, sender_email, sender_password):
     def build_plain_text(student):
         marks     = student["marks"]
         total_max = len(marks) * 100
+        active_subs = get_subjects_for_class(student.get('grade', '10'), student.get('group'))
         lines     = "\n".join(
             f"  {name:<18}: {mark:>3} / 100"
-            for name, mark in zip(SUBJECTS, marks)
+            for name, mark in zip(active_subs, marks)
         )
         divider = "  " + "-" * 28
         return f"""\
@@ -162,8 +217,10 @@ Class Teacher (AcaTier)
         )
 
         # Build subject rows
+        active_subs = get_subjects_for_class(student.get('grade', '10'), student.get('group'))
+        active_icons = get_icons_for_class(student.get('grade', '10'), student.get('group'))
         subject_rows = ""
-        for name, icon, mark in zip(SUBJECTS, subject_icons, marks):
+        for name, icon, mark in zip(active_subs, active_icons, marks):
             pct   = mark  # out of 100
             s_clr = "#48bb78" if pct >= 75 else "#f6ad55" if pct >= 50 else "#fc8181"
             subject_rows += f"""
@@ -376,7 +433,10 @@ Class Teacher (AcaTier)
 
         for s in students:
             msg = MIMEMultipart("related")
-            msg["Subject"] = f"📊 Report Card — {s['name']} | AcaTier"
+            class_lbl = f"Class {s.get('grade', '10')}"
+            if s.get('group'):
+                class_lbl += f" ({s.get('group')} Group)"
+            msg["Subject"] = f"📊 Report Card — {s['name']} | {class_lbl} | AcaTier"
             msg["From"]    = f"AcaTier <{sender_email}>"
             msg["To"]      = s["parent_email"]
 

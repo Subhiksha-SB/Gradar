@@ -1,5 +1,5 @@
 /* ================================================
-   app.js — Gradar Frontend
+   app.js — AcaTier Frontend
    ================================================ */
 
 const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost' || window.location.protocol === 'file:'
@@ -16,12 +16,12 @@ const SUBJECTS = [
 
 // ─── Authentication state & helpers ────────────────
 function getToken() {
-  return localStorage.getItem('gradar_admin_token');
+  return localStorage.getItem('acatier_admin_token');
 }
 
 function setToken(token) {
-  if (token) localStorage.setItem('gradar_admin_token', token);
-  else localStorage.removeItem('gradar_admin_token');
+  if (token) localStorage.setItem('acatier_admin_token', token);
+  else localStorage.removeItem('acatier_admin_token');
 }
 
 async function authFetch(url, options = {}) {

@@ -20,7 +20,7 @@ from email_service import send_report_email, verify_credentials
 app = Flask(__name__)
 CORS(app)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "gradar-secure-secret-key-2026")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "acatier-secure-secret-key-2026")
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -46,7 +46,7 @@ with app.app_context():
     
     # Auto-seed default administrator if none exists
     if not Admin.query.filter_by(username="admin").first():
-        default_admin = Admin(username="admin", email="admin@gradar.local")
+        default_admin = Admin(username="admin", email="admin@acatier.local")
         default_admin.set_password("admin123")
         db.session.add(default_admin)
         db.session.commit()
@@ -54,7 +54,7 @@ with app.app_context():
 
     # Seed the requested subhi admin credentials
     if not Admin.query.filter_by(username="subhi").first():
-        subhi_admin = Admin(username="subhi", email="subhi@gradar.local")
+        subhi_admin = Admin(username="subhi", email="subhi@acatier.local")
         subhi_admin.set_password("selva")
         db.session.add(subhi_admin)
         db.session.commit()

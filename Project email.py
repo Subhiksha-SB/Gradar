@@ -144,7 +144,7 @@ Here is the academic performance report for {student['name']}:
 We encourage you to discuss these results with your child.
 
 Warm regards,
-Class Teacher (Gradar)
+Class Teacher (AcaTier)
 """
 
     def build_html_body(student):
@@ -241,11 +241,11 @@ Class Teacher (Gradar)
           <td style="background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 50%, #0f1623 100%);
                      padding:36px 36px;text-align:center;border-bottom: 1px solid rgba(255,255,255,0.08);">
             <div class="brand-logo-container">
-              <img src="cid:gradar_logo" class="brand-logo-img" alt="Gradar Logo"/>
+              <img src="cid:acatier_logo" class="brand-logo-img" alt="AcaTier Logo"/>
               <div class="shine-sweep"></div>
             </div>
             <h1 style="margin:0;font-size:24px;font-weight:800;color:#f0f4ff;
-                        letter-spacing:-0.5px;">Gradar</h1>
+                        letter-spacing:-0.5px;">AcaTier</h1>
             <p style="margin:6px 0 0;color:#63b3ed;font-size:13px;font-weight:500;
                        text-transform:uppercase;letter-spacing:1px;">
               Academic Performance Report
@@ -357,7 +357,7 @@ Class Teacher (Gradar)
         <tr>
           <td style="background:#05070f;border-top:1px solid rgba(255,255,255,0.08);padding:20px 36px;text-align:center;">
             <p style="margin:0;color:#475569;font-size:12px;">
-              Sent by <strong style="color:#63b3ed;">Gradar</strong> &nbsp;·&nbsp; Class Teacher
+              Sent by <strong style="color:#63b3ed;">AcaTier</strong> &nbsp;·&nbsp; Class Teacher
             </p>
           </td>
         </tr>
@@ -376,8 +376,8 @@ Class Teacher (Gradar)
 
         for s in students:
             msg = MIMEMultipart("related")
-            msg["Subject"] = f"📊 Report Card — {s['name']} | Gradar"
-            msg["From"]    = f"Gradar <{sender_email}>"
+            msg["Subject"] = f"📊 Report Card — {s['name']} | AcaTier"
+            msg["From"]    = f"AcaTier <{sender_email}>"
             msg["To"]      = s["parent_email"]
 
             msg_alternative = MIMEMultipart("alternative")
@@ -386,13 +386,13 @@ Class Teacher (Gradar)
             msg_alternative.attach(MIMEText(build_plain_text(s), "plain", "utf-8"))
             msg_alternative.attach(MIMEText(build_html_body(s), "html", "utf-8"))
 
-            logo_path = os.path.join(os.path.dirname(__file__), "student-report-app", "frontend", "gradar-logo.png")
+            logo_path = os.path.join(os.path.dirname(__file__), "student-report-app", "frontend", "acatier-logo.png")
             if os.path.exists(logo_path):
                 with open(logo_path, "rb") as f:
                     img_data = f.read()
                 img = MIMEImage(img_data)
-                img.add_header("Content-ID", "<gradar_logo>")
-                img.add_header("Content-Disposition", "inline", filename="gradar-logo.png")
+                img.add_header("Content-ID", "<acatier_logo>")
+                img.add_header("Content-Disposition", "inline", filename="acatier-logo.png")
                 msg.attach(img)
 
             server.sendmail(sender_email, s["parent_email"], msg.as_string())

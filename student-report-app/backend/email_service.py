@@ -112,11 +112,11 @@ def _build_html_body(student: dict) -> str:
           <td style="background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 50%, #0f1623 100%);
                      padding:36px 36px;text-align:center;border-bottom: 1px solid rgba(255,255,255,0.08);">
             <div class="brand-logo-container">
-              <img src="cid:gradar_logo" class="brand-logo-img" alt="Gradar Logo"/>
+              <img src="cid:acatier_logo" class="brand-logo-img" alt="AcaTier Logo"/>
               <div class="shine-sweep"></div>
             </div>
             <h1 style="margin:0;font-size:24px;font-weight:800;color:#f0f4ff;
-                        letter-spacing:-0.5px;">Gradar</h1>
+                        letter-spacing:-0.5px;">AcaTier</h1>
             <p style="margin:6px 0 0;color:#63b3ed;font-size:13px;font-weight:500;
                        text-transform:uppercase;letter-spacing:1px;">
               Academic Performance Report
@@ -228,7 +228,7 @@ def _build_html_body(student: dict) -> str:
         <tr>
           <td style="background:#05070f;border-top:1px solid rgba(255,255,255,0.08);padding:20px 36px;text-align:center;">
             <p style="margin:0;color:#475569;font-size:12px;">
-              Sent by <strong style="color:#63b3ed;">Gradar</strong> &nbsp;·&nbsp; Class Teacher
+              Sent by <strong style="color:#63b3ed;">AcaTier</strong> &nbsp;·&nbsp; Class Teacher
             </p>
           </td>
         </tr>
@@ -267,7 +267,7 @@ Here is the academic performance report for {student['name']}:
 We encourage you to discuss these results with your child.
 
 Warm regards,
-Class Teacher (Gradar)
+Class Teacher (AcaTier)
 """
 
 
@@ -299,8 +299,8 @@ def send_report_email(student: dict,
     try:
         # Build multipart message (using "related" to support inline logo)
         msg = MIMEMultipart("related")
-        msg["Subject"] = f"📊 Report Card — {student['name']} | Gradar"
-        msg["From"]    = f"Gradar <{sender_email}>"
+        msg["Subject"] = f"📊 Report Card — {student['name']} | AcaTier"
+        msg["From"]    = f"AcaTier <{sender_email}>"
         msg["To"]      = student["parent_email"]
 
         # Create alternative part for plain text & HTML
@@ -313,13 +313,13 @@ def send_report_email(student: dict,
 
         # Attach logo as inline image
         import os
-        logo_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "gradar-logo.png")
+        logo_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "acatier-logo.png")
         if os.path.exists(logo_path):
             with open(logo_path, "rb") as f:
                 img_data = f.read()
             img = MIMEImage(img_data)
-            img.add_header("Content-ID", "<gradar_logo>")
-            img.add_header("Content-Disposition", "inline", filename="gradar-logo.png")
+            img.add_header("Content-ID", "<acatier_logo>")
+            img.add_header("Content-Disposition", "inline", filename="acatier-logo.png")
             msg.attach(img)
 
         ctx = ssl.create_default_context()

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AcaTier — Student Performance &amp; Email System</title>
   <meta name="description" content="Send student report cards to parents via email. Add students, calculate ranks, and deliver personalized academic reports." />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=2" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
 </head>
 <body>
@@ -38,7 +38,7 @@
         <span class="admin-name" id="admin-name">Admin</span>
       </div>
       <button id="logout-btn" class="btn btn-logout" style="display: none;">🚪 Log Out</button>
-      <button id="setup-btn" class="btn btn-ghost">⚙️ SMTP Setup</button>
+      <button id="setup-btn" class="btn btn-ghost">⚙️ Delivery Setup</button>
       <button id="export-csv-btn" class="btn btn-ghost">📥 Export CSV</button>
       <button id="send-all-btn" class="btn btn-violet">
         <span class="spinner" aria-hidden="true"></span>
@@ -94,6 +94,12 @@
               <div class="form-group">
                 <label for="parent-email">Parent Email</label>
                 <input type="email" id="parent-email" placeholder="e.g. parent@gmail.com"
+                       autocomplete="off" required />
+              </div>
+
+              <div class="form-group">
+                <label for="parent-whatsapp">💬 Parent WhatsApp Number</label>
+                <input type="tel" id="parent-whatsapp" placeholder="e.g. +919876543210"
                        autocomplete="off" required />
               </div>
 
@@ -262,6 +268,7 @@
                   <th class="text-center">Total</th>
                   <th class="text-center">Average</th>
                   <th class="text-center">Email Status</th>
+                  <th class="text-center">WhatsApp Status</th>
                   <th class="text-center">Actions</th>
                 </tr>
               </thead>
@@ -345,18 +352,25 @@
     </div>
   </div>
 
-  <!-- ══ SMTP Setup Modal ══ -->
+  <!-- ══ Delivery Setup Modal (Tabbed) ══ -->
   <div id="teacher-modal-overlay" class="modal-overlay" role="dialog"
        aria-modal="true" aria-labelledby="teacher-modal-title">
     <div class="modal setup-modal" style="width: 500px; max-width: 95vw;">
-      <div class="modal-header">
+      <div class="modal-header" style="margin-bottom: 0.75rem;">
         <h2 id="teacher-modal-title" class="modal-title">
-          <span>📧</span> Teacher SMTP Setup
+          <span>⚙️</span> Delivery Settings
         </h2>
         <button id="close-teacher-modal-btn" class="modal-close" aria-label="Close">✕</button>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:1.25rem;">
+      <!-- Tabs header -->
+      <div class="setup-tabs-header" style="display: flex; gap: 8px; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+        <button class="tab-btn active" id="tab-email" type="button" style="background: transparent; border: none; color: var(--accent-blue); border-bottom: 2px solid var(--accent-blue); padding: 8px 12px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); font-size: 0.85rem; transition: var(--transition);">📧 Email Setup</button>
+        <button class="tab-btn" id="tab-whatsapp" type="button" style="background: transparent; border: none; color: var(--text-secondary); border-bottom: 2px solid transparent; padding: 8px 12px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); font-size: 0.85rem; transition: var(--transition);">💬 WhatsApp Setup</button>
+      </div>
+
+      <!-- Tab: Email Setup Panel -->
+      <div id="panel-email" class="setup-panel active" style="display: flex; flex-direction: column; gap: 1.25rem;">
         <p class="text-muted" style="font-size:0.85rem; margin-top:-0.5rem; line-height:1.4;">
           Configure your Gmail credentials to send report cards directly to parent emails.
         </p>
@@ -390,10 +404,60 @@
         </div>
       </div>
 
+      <!-- Tab: WhatsApp Setup Panel -->
+      <div id="panel-whatsapp" class="setup-panel" style="display: none; flex-direction: column; gap: 1.25rem;">
+        <p class="text-muted" style="font-size:0.85rem; margin-top:-0.5rem; line-height:1.4;">
+          Configure how you want WhatsApp report cards to be dispatched to parents.
+        </p>
+
+        <!-- Delivery Mode Selection -->
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="whatsapp-delivery-mode">WhatsApp Mode</label>
+          <select id="whatsapp-delivery-mode">
+            <option value="direct" selected>Direct WhatsApp Link (Free & Manual)</option>
+            <option value="twilio">Twilio Automated API (Programmatic)</option>
+          </select>
+        </div>
+
+        <!-- Twilio fields container (collapsible) -->
+        <div id="twilio-fields-container" style="display: none; flex-direction: column; gap: 1.1rem;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="twilio-sid">Twilio Account SID</label>
+            <input type="text" id="twilio-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false" />
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="twilio-token">Twilio Auth Token</label>
+            <input type="password" id="twilio-token" placeholder="your_auth_token" spellcheck="false" />
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="twilio-sender">Twilio WhatsApp Sender</label>
+            <input type="text" id="twilio-sender" placeholder="+14155238886" spellcheck="false" />
+          </div>
+
+          <!-- Info strip -->
+          <div class="tf-info-strip" style="margin-top:0; border-color: rgba(159,122,234,0.3); background: rgba(159,122,234,0.04);">
+            <span style="color:var(--accent-violet)">ℹ️</span>
+            <span style="color:var(--text-secondary)">
+              Ensure the sender matches your Twilio WhatsApp number (e.g. sandbox `+14155238886` or a verified business number).
+            </span>
+          </div>
+        </div>
+
+        <!-- Direct mode info strip -->
+        <div id="direct-fields-container" class="tf-info-strip" style="margin-top:0; border-color: rgba(79,209,197,0.3); background: rgba(79,209,197,0.04);">
+          <span style="color:var(--accent-cyan)">💬</span>
+          <span style="color:var(--text-secondary)">
+            Direct Mode formats student cards in markdown. Clicking 💬 WhatsApp will open a prefilled chat directly. No accounts or keys required!
+          </span>
+        </div>
+      </div>
+
       <div class="modal-footer" style="margin-top:1.5rem;">
         <button id="test-creds-btn" class="btn btn-ghost" type="button" style="flex:1;">
           <span class="spinner" aria-hidden="true"></span>
-          <span class="btn-text">🔗 Test Connection</span>
+          <span class="btn-text">🔗 Test Email Conn</span>
         </button>
         <button id="save-creds-btn" class="btn btn-green" type="button" style="flex:1;">
           ✔ Save &amp; Activate
@@ -444,6 +508,6 @@
   </div>
 
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2"></script>
 </body>
 </html>

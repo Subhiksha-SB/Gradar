@@ -43,6 +43,10 @@ def get_student_data():
         while "@" not in parent_email or "." not in parent_email:
             parent_email = input("Invalid email. Enter Parent Email: ").strip()
 
+        parent_whatsapp = input("Parent WhatsApp Number (with Country Code): ").strip()
+        while not parent_whatsapp:
+            parent_whatsapp = input("WhatsApp number cannot be empty. Enter Parent WhatsApp Number: ").strip()
+
         while True:
             grade = input("Class / Grade (1-12): ").strip()
             if grade.isdigit() and 1 <= int(grade) <= 12:
@@ -87,6 +91,7 @@ def get_student_data():
         students.append({
             "name": name,
             "parent_email": parent_email,
+            "parent_whatsapp": parent_whatsapp,
             "marks": marks,
             "total": total,
             "average": avg,
@@ -119,6 +124,7 @@ def display_results(students):
         active_subs = get_subjects_for_class(s.get('grade', '10'), s.get('group'))
         sub_marks_str = ", ".join(f"{sub}: {mark}" for sub, mark in zip(active_subs, s['marks']))
         print(f"      📚 Marks: {sub_marks_str}")
+        print(f"      📧 parent_email: {s['parent_email']} | 💬 parent_whatsapp: {s['parent_whatsapp']}")
         print("-"*95)
 
 def class_summary(students):
@@ -142,7 +148,7 @@ def class_summary(students):
 def save_to_csv(students, filename="results.csv"):
     with open(filename, mode="w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Rank", "Name", "Class", "Group", "Marks", "Total", "Average", "Parent Email"])
+        writer.writerow(["Rank", "Name", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Parent WhatsApp"])
         for s in students:
             writer.writerow([
                 s['rank'],
@@ -152,7 +158,8 @@ def save_to_csv(students, filename="results.csv"):
                 " | ".join(str(m) for m in s['marks']),
                 s['total'],
                 f"{s['average']:.2f}",
-                s['parent_email']
+                s['parent_email'],
+                s.get('parent_whatsapp', '—')
             ])
     print(f"\n✅ Results saved successfully in '{filename}'")
 
@@ -483,9 +490,10 @@ def main():
         print("3. Delete a Student Record")
         print("4. Save Results to CSV")
         print("5. Send Report Cards via Email")
-        print("6. Exit")
+        print("6. Launch WhatsApp Direct Chat Links")
+        print("7. Exit")
         
-        choice = input("\nEnter choice (1-6): ").strip()
+        choice = input("\nEnter choice (1-7): ").strip()
         
         if choice == "1":
             new_students = get_student_data()
@@ -543,10 +551,62 @@ def main():
             send_emails(students, sender_email, sender_password)
             
         elif choice == "6":
+            if not students:
+                print("\n⚠️ No student records. Please add students first.")
+                continue
+            print("\nGenerating WhatsApp direct chat links...")
+            import urllib.parse
+            import webbrowser
+            
+            def build_wa_text(student):
+                marks = student["marks"]
+                total_max = len(marks) * 100
+                active_subs = get_subjects_for_class(student.get('grade', '10'), student.get('group'))
+                sub_lines = []
+                for sub, mark in zip(active_subs, marks):
+                    sub_lines.append(f"📚 {sub}: {mark}/100")
+                sub_text = "\n".join(sub_lines)
+                
+                avg = student["average"]
+                g_lbl = "Good 👍"
+                if avg >= 90: g_lbl = "Outstanding 🌟"
+                elif avg >= 75: g_lbl = "Excellent ⭐"
+                elif avg >= 60: g_lbl = "Good 👍"
+                elif avg >= 50: g_lbl = "Satisfactory 📚"
+                else: g_lbl = "Needs Improvement 💪"
+
+                return f"""*AcaTier Academic Performance Report* 🎓
+
+Dear Parent,
+Here is the academic performance report for your child *{student['name']}* (Class {student.get('grade', '10')}{' - ' + student.get('group') + ' Group' if student.get('group') else ''}):
+
+*SUBJECT-WISE MARKS*
+{sub_text}
+
+*SUMMARY*
+🏆 *Class Rank:* #{student['rank']}
+📊 *Total Score:* {student['total']} / {total_max}
+📈 *Average:* {student['average']:.1f}%
+🌟 *Overall Performance:* {g_lbl}
+
+We encourage you to discuss these results with your child.
+Warm regards,
+Class Teacher (AcaTier)"""
+
+            for s in students:
+                phone = s.get('parent_whatsapp', '').strip().replace('+', '').replace(' ', '').replace('-', '')
+                msg = build_wa_text(s)
+                encoded_msg = urllib.parse.quote(msg)
+                url = f"https://api.whatsapp.com/send?phone={phone}&text={encoded_msg}"
+                print(f"\n👉 Launching WhatsApp for {s['name']} ({s['parent_whatsapp']})...")
+                webbrowser.open(url)
+            print("\nAll WhatsApp links launched in your browser!")
+
+        elif choice == "7":
             print("\nExiting program. Goodbye!")
             break
         else:
-            print("\n❌ Invalid choice. Please enter a number between 1 and 6.")
+            print("\n❌ Invalid choice. Please enter a number between 1 and 7.")
 
 if __name__ == "__main__":
     main()

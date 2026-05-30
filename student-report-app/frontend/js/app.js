@@ -136,7 +136,15 @@ async function authFetch(url, options = {}) {
 }
 
 // ─── Credentials state ────────────────────────────
-let creds = { email: '', password: '', verified: false };
+let creds = {
+  email: '',
+  password: '',
+  verified: false,
+  twilio_sid: '',
+  twilio_token: '',
+  twilio_sender: '',
+  whatsapp_mode: 'direct'
+};
 
 // ─── Students state ───────────────────────────────
 let students = [];
@@ -224,9 +232,51 @@ testCredsBtn.addEventListener('click', async () => {
 });
 
 // ─── Save & Activate ─────────────────────────────
+// ─── Load credentials from localStorage ────────────
+function loadSavedCredentials() {
+  try {
+    const saved = localStorage.getItem('acatier_delivery_creds');
+    if (saved) {
+      creds = JSON.parse(saved);
+      
+      if (emailInput) emailInput.value = creds.email || '';
+      if (passwordInput) passwordInput.value = creds.password || '';
+      
+      const twilioSidInput = document.getElementById('twilio-sid');
+      const twilioTokenInput = document.getElementById('twilio-token');
+      const twilioSenderInput = document.getElementById('twilio-sender');
+      const whatsappModeSelect = document.getElementById('whatsapp-delivery-mode');
+      
+      if (twilioSidInput) twilioSidInput.value = creds.twilio_sid || '';
+      if (twilioTokenInput) twilioTokenInput.value = creds.twilio_token || '';
+      if (twilioSenderInput) twilioSenderInput.value = creds.twilio_sender || '';
+      
+      if (whatsappModeSelect) {
+        whatsappModeSelect.value = creds.whatsapp_mode || 'direct';
+        whatsappModeSelect.dispatchEvent(new Event('change'));
+      }
+      
+      setCredBadge('cred-ok', '🔑 Saved — Ready to Send');
+    }
+  } catch (e) {
+    console.error("Error loading saved credentials", e);
+  }
+}
+
+// ─── Save & Activate ─────────────────────────────
 saveCredsBtn.addEventListener('click', () => {
   const email = emailInput.value.trim();
   const pass  = passwordInput.value.trim();
+  
+  const twilioSidInput = document.getElementById('twilio-sid');
+  const twilioTokenInput = document.getElementById('twilio-token');
+  const twilioSenderInput = document.getElementById('twilio-sender');
+  const whatsappModeSelect = document.getElementById('whatsapp-delivery-mode');
+  
+  const twilio_sid = twilioSidInput ? twilioSidInput.value.trim() : '';
+  const twilio_token = twilioTokenInput ? twilioTokenInput.value.trim() : '';
+  const twilio_sender = twilioSenderInput ? twilioSenderInput.value.trim() : '';
+  const whatsapp_mode = whatsappModeSelect ? whatsappModeSelect.value : 'direct';
 
   if (!email || !pass) {
     toast('warning', 'Missing Fields', 'Enter both Gmail address and App Password.');
@@ -234,30 +284,58 @@ saveCredsBtn.addEventListener('click', () => {
     return;
   }
 
-  creds = { email, password: pass, verified: false };
+  if (whatsapp_mode === 'twilio' && (!twilio_sid || !twilio_token || !twilio_sender)) {
+    toast('warning', 'Missing Fields', 'Enter Twilio SID, Token and Sender Number for automated mode.');
+    if (twilioSidInput) twilioSidInput.focus();
+    return;
+  }
+
+  creds = {
+    email,
+    password: pass,
+    verified: creds.verified,
+    twilio_sid,
+    twilio_token,
+    twilio_sender,
+    whatsapp_mode
+  };
+  
+  localStorage.setItem('acatier_delivery_creds', JSON.stringify(creds));
   setCredBadge('cred-ok', '🔑 Saved — Ready to Send');
-  toast('success', 'Credentials Activated!',
-    'Click "✉️ Send" on any student row to send their report card to the parent.');
+  toast('success', 'Delivery Configurations Saved!',
+    'Your settings are active and ready to deliver report cards.');
   teacherModal.classList.remove('active');
 });
 
 // ─── Get active credentials (with validation) ────
 function getCredentials() {
-  // Prefer explicitly saved, fall back to current field values
   const email = creds.email || emailInput.value.trim();
   const pass  = creds.password || passwordInput.value.trim();
-  return { email, pass };
+  
+  const twilioSidInput = document.getElementById('twilio-sid');
+  const twilioTokenInput = document.getElementById('twilio-token');
+  const twilioSenderInput = document.getElementById('twilio-sender');
+  const whatsappModeSelect = document.getElementById('whatsapp-delivery-mode');
+  
+  return {
+    email,
+    pass,
+    twilio_sid: creds.twilio_sid || (twilioSidInput ? twilioSidInput.value.trim() : ''),
+    twilio_token: creds.twilio_token || (twilioTokenInput ? twilioTokenInput.value.trim() : ''),
+    twilio_sender: creds.twilio_sender || (twilioSenderInput ? twilioSenderInput.value.trim() : ''),
+    whatsapp_mode: creds.whatsapp_mode || (whatsappModeSelect ? whatsappModeSelect.value : 'direct')
+  };
 }
 
 function requireCreds() {
-  const { email, pass } = getCredentials();
-  if (!email || !pass) {
+  const cr = getCredentials();
+  if (!cr.email || !cr.pass) {
     toast('warning', 'Setup Required',
-      'Please enter your Gmail & App Password in the Teacher Email Setup panel, then click "Save & Activate".');
+      'Please enter your Gmail & App Password in the Delivery Settings panel, then click "Save & Activate".');
     emailInput.focus();
     return null;
   }
-  return { email, pass };
+  return cr;
 }
 
 // ─── Fetch students ───────────────────────────────
@@ -364,6 +442,7 @@ function renderTable() {
         <th class="text-center">Total Score</th>
         <th class="text-center">Average</th>
         <th class="text-center">Email Status</th>
+        <th class="text-center">WhatsApp Status</th>
         <th class="text-center">Actions</th>
       </tr>
     `;
@@ -386,6 +465,7 @@ function renderTable() {
         <th class="text-center">Total</th>
         <th class="text-center">Average</th>
         <th class="text-center">Email Status</th>
+        <th class="text-center">WhatsApp Status</th>
         <th class="text-center">Actions</th>
       </tr>
     `;
@@ -396,14 +476,24 @@ function renderTable() {
   filteredStudents.forEach(s => {
     const rankClass  = s.rank <= 3 ? `rank-${s.rank}` : 'rank-other';
     const rankLabel  = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : s.rank;
+    
     const emailBadge = s.email_sent
       ? `<span class="email-status sent">✉️ Sent</span>`
       : `<span class="email-status pending">⏳ Pending</span>`;
+
+    const whatsappBadge = s.whatsapp_sent
+      ? `<span class="whatsapp-status sent">💬 Sent</span>`
+      : `<span class="whatsapp-status pending">⏳ Pending</span>`;
 
     const sendBtnClass = s.email_sent
       ? 'btn btn-send btn-sm sent'
       : 'btn btn-send btn-sm';
     const sendLabel = s.email_sent ? '✔ Resend' : '✉️ Send';
+
+    const whatsappBtnClass = s.whatsapp_sent
+      ? 'btn btn-whatsapp btn-sm sent'
+      : 'btn btn-whatsapp btn-sm';
+    const whatsappLabel = s.whatsapp_sent ? '✔ Resend' : '💬 WhatsApp';
 
     // Serialise marks for the delete modal onclick (as JSON-safe)
     const marksJson = JSON.stringify(s.marks).replace(/"/g, '&quot;');
@@ -426,18 +516,25 @@ function renderTable() {
         <td class="text-center"><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
         <td>
           <div style="font-weight:600;color:var(--text-primary)">${esc(s.name)}</div>
-          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${esc(s.parent_email)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">📧 ${esc(s.parent_email)}</div>
+          ${s.parent_whatsapp ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:1px">💬 ${esc(s.parent_whatsapp)}</div>` : ''}
         </td>
         <td class="text-center">${classBadge}</td>
         <td class="text-center" style="font-family:var(--font-mono);font-weight:700">${s.total} / ${totalMax}</td>
         <td class="text-center"><span class="avg-badge ${avgClass(s.average)}">${s.average}%</span></td>
         <td class="text-center">${emailBadge}</td>
+        <td class="text-center">${whatsappBadge}</td>
         <td class="text-center">
-          <div class="action-cell" style="justify-content: center;">
+          <div class="action-cell" style="justify-content: center; gap: 4px;">
             <button class="${sendBtnClass}" id="send-btn-${s.id}"
               onclick="sendSingleEmail(${s.id},'${esc(s.name)}','${esc(s.parent_email)}')"
               title="Send report card to ${esc(s.parent_email)}">
               ${sendLabel}
+            </button>
+            <button class="${whatsappBtnClass}" id="wa-btn-${s.id}"
+              onclick="triggerWhatsApp(${s.id})"
+              title="Send WhatsApp report to parent">
+              ${whatsappLabel}
             </button>
             <button class="btn btn-danger btn-sm"
               onclick="deleteStudent(${s.id},'${esc(s.name)}','${esc(s.parent_email)}',${marksJson},${s.total},${s.average},'${s.grade}','${s.group||''}')"
@@ -463,18 +560,25 @@ function renderTable() {
         <td class="text-center"><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
         <td>
           <div style="font-weight:600;color:var(--text-primary)">${esc(s.name)}</div>
-          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${esc(s.parent_email)}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">📧 ${esc(s.parent_email)}</div>
+          ${s.parent_whatsapp ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:1px">💬 ${esc(s.parent_whatsapp)}</div>` : ''}
         </td>
         ${subjectCells}
         <td class="text-center" style="font-family:var(--font-mono);font-weight:700">${s.total}</td>
         <td class="text-center"><span class="avg-badge ${avgClass(s.average)}">${s.average}%</span></td>
         <td class="text-center">${emailBadge}</td>
+        <td class="text-center">${whatsappBadge}</td>
         <td class="text-center">
-          <div class="action-cell" style="justify-content: center;">
+          <div class="action-cell" style="justify-content: center; gap: 4px;">
             <button class="${sendBtnClass}" id="send-btn-${s.id}"
               onclick="sendSingleEmail(${s.id},'${esc(s.name)}','${esc(s.parent_email)}')"
               title="Send report card to ${esc(s.parent_email)}">
               ${sendLabel}
+            </button>
+            <button class="${whatsappBtnClass}" id="wa-btn-${s.id}"
+              onclick="triggerWhatsApp(${s.id})"
+              title="Send WhatsApp report to parent">
+              ${whatsappLabel}
             </button>
             <button class="btn btn-danger btn-sm"
               onclick="deleteStudent(${s.id},'${esc(s.name)}','${esc(s.parent_email)}',${marksJson},${s.total},${s.average},'${s.grade}','${s.group||''}')"
@@ -536,11 +640,12 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   e.preventDefault();
   const name  = document.getElementById('student-name').value.trim();
   const email = document.getElementById('parent-email').value.trim();
+  const whatsapp = document.getElementById('parent-whatsapp').value.trim();
   const grade = document.getElementById('student-class').value;
   const board = document.getElementById('student-board').value;
   const group = (grade === '11' || grade === '12') ? document.getElementById('student-group').value : null;
 
-  if (!name || !email) { toast('error', 'Missing Fields', 'Name and parent email are required.'); return; }
+  if (!name || !email || !whatsapp) { toast('error', 'Missing Fields', 'Name, parent email and parent WhatsApp are required.'); return; }
 
   const marks   = currentFormSubjects.map(s => parseInt(document.getElementById(s.id).value, 10));
   const missing = currentFormSubjects.filter((_, i) => isNaN(marks[i]));
@@ -558,13 +663,21 @@ document.getElementById('add-student-form').addEventListener('submit', async (e)
   try {
     const res  = await authFetch(`${API}/students`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, parent_email: email, marks, grade, group, board }),
+      body: JSON.stringify({ name, parent_email: email, parent_whatsapp: whatsapp, marks, grade, group, board }),
     });
     const data = await res.json();
     if (res.ok) {
       toast('success', 'Student Added', `${name} added to the leaderboard.`);
-      document.getElementById('add-student-form').reset();
-      updateFormSubjects();
+      // Clear only student-specific fields — preserve Board, Class, Group selections
+      document.getElementById('student-name').value = '';
+      document.getElementById('parent-email').value = '';
+      document.getElementById('parent-whatsapp').value = '';
+      // Clear all subject mark inputs
+      currentFormSubjects.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (el) el.value = '';
+      });
+      document.getElementById('student-name').focus();
       fetchStudents();
     } else {
       toast('error', 'Error', data.error || 'Failed to add student.');
@@ -702,13 +815,20 @@ async function sendSingleEmail(id, name, parentEmail) {
     const res  = await authFetch(`${API}/send-email/${id}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ sender_email: cr.email, sender_password: cr.pass }),
+      body:    JSON.stringify({
+        sender_email: cr.email,
+        sender_password: cr.pass,
+        twilio_sid: cr.twilio_sid,
+        twilio_token: cr.twilio_token,
+        twilio_sender: cr.twilio_sender,
+        whatsapp_mode: cr.whatsapp_mode
+      }),
     });
     const data = await res.json();
 
     if (res.ok && data.success) {
-      toast('success', '📬 Report Card Sent!',
-        `Successfully delivered to ${parentEmail}`);
+      toast('success', '📬 Report Card Dispatched!',
+        `Successfully delivered report.`);
       if (btn) { btn.classList.remove('sending'); btn.classList.add('sent'); btn.innerHTML = '✔ Sent'; }
       fetchStudents();
     } else {
@@ -736,7 +856,14 @@ document.getElementById('send-all-btn').addEventListener('click', async () => {
     const res  = await authFetch(`${API}/send-emails`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ sender_email: cr.email, sender_password: cr.pass }),
+      body:    JSON.stringify({
+        sender_email: cr.email,
+        sender_password: cr.pass,
+        twilio_sid: cr.twilio_sid,
+        twilio_token: cr.twilio_token,
+        twilio_sender: cr.twilio_sender,
+        whatsapp_mode: cr.whatsapp_mode
+      }),
     });
     const data = await res.json();
 
@@ -751,11 +878,11 @@ document.getElementById('send-all-btn').addEventListener('click', async () => {
         emailResultsLog.appendChild(item);
       });
       const sent = data.results.filter(r => r.success).length;
-      toast('success', 'All Emails Processed',
-        `${sent}/${data.results.length} report cards sent to parents.`);
+      toast('success', 'All Reports Processed',
+        `${sent}/${data.results.length} student reports dispatched.`);
       fetchStudents();
     } else {
-      toast('error', 'Error', data.error || 'Failed to send emails.');
+      toast('error', 'Error', data.error || 'Failed to send reports.');
     }
   } catch { toast('error', 'Connection Error', 'Could not reach the backend.'); }
   finally { btn.classList.remove('loading'); btn.disabled = false; }
@@ -900,10 +1027,161 @@ if (logoutBtn) {
   });
 }
 
+// ─── Trigger WhatsApp ─────────────────────────────
+async function triggerWhatsApp(id) {
+  const student = students.find(s => s.id === id);
+  if (!student) return;
+  
+  if (!student.parent_whatsapp) {
+    toast('warning', 'No WhatsApp number', `Please enter parent's WhatsApp number for ${student.name}.`);
+    return;
+  }
+  
+  const c = requireCreds();
+  if (!c) return;
+  
+  if (c.whatsapp_mode === 'twilio') {
+    const btn = document.getElementById(`wa-btn-${id}`);
+    if (btn) {
+      btn.classList.add('sending');
+      btn.innerHTML = `<span class="spinner" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite"></span> Sending…`;
+    }
+    toast('info', 'Sending…', `Sending WhatsApp via Twilio to ${student.parent_whatsapp}`);
+    
+    try {
+      const res = await authFetch(`${API}/send-email/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender_email: c.email,
+          sender_password: c.pass,
+          twilio_sid: c.twilio_sid,
+          twilio_token: c.twilio_token,
+          twilio_sender: c.twilio_sender,
+          whatsapp_mode: c.whatsapp_mode
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast('success', '💬 WhatsApp Sent!', `WhatsApp report delivered.`);
+        fetchStudents();
+      } else {
+        toast('error', 'WhatsApp Failed', data.message || 'Error occurred during delivery.');
+        if (btn) { btn.classList.remove('sending'); btn.innerHTML = '💬 Retry'; }
+      }
+    } catch {
+      toast('error', 'Connection Error', 'Could not reach server.');
+      if (btn) { btn.classList.remove('sending'); btn.innerHTML = '💬 Retry'; }
+    }
+  } else {
+    const bodyText = buildWhatsAppDirectText(student);
+    const phoneNum = student.parent_whatsapp.trim().replace(/\+/g, '').replace(/[\s-()]/g, '');
+    const url = `https://api.whatsapp.com/send?phone=${phoneNum}&text=${encodeURIComponent(bodyText)}`;
+    
+    window.open(url, '_blank');
+    
+    try {
+      await authFetch(`${API}/students/${id}/whatsapp-sent`, { method: 'POST' });
+      fetchStudents();
+      toast('success', 'WhatsApp Opened', `WhatsApp window launched for parent chat.`);
+    } catch (e) {
+      console.error("Error logging manual WhatsApp send", e);
+    }
+  }
+}
+
+function buildWhatsAppDirectText(student) {
+  const subjects = getSubjectsForForm(student.grade, student.group, student.board);
+  const totalMax = student.marks.length * 100;
+  
+  let subjectLines = [];
+  student.marks.forEach((mark, i) => {
+    const sub = subjects[i];
+    const subName = sub ? sub.name.split(' / ')[0] : 'Subject';
+    const subIcon = sub ? sub.icon : '📚';
+    subjectLines.push(`${subIcon} *${subName}*: ${mark} / 100`);
+  });
+  const subjectText = subjectLines.join('\n');
+  
+  let gradeLabel = 'Good 👍';
+  const avg = student.average;
+  if (avg >= 90) gradeLabel = "Outstanding 🌟";
+  else if (avg >= 75) gradeLabel = "Excellent ⭐";
+  else if (avg >= 60) gradeLabel = "Good 👍";
+  else if (avg >= 50) gradeLabel = "Satisfactory 📚";
+  else gradeLabel = "Needs Improvement 💪";
+
+  return `*AcaTier Academic Performance Report* 🎓
+
+Dear Parent,
+Here is the academic performance report for your child *${student.name}* (Class ${student.grade}${student.group ? ' - ' + student.group + ' Group' : ''}):
+
+*SUBJECT-WISE MARKS*
+${subjectText}
+
+*SUMMARY*
+🏆 *Class Rank:* #${student.rank}
+📊 *Total Score:* ${student.total} / ${totalMax}
+📈 *Average:* ${student.average}%
+🌟 *Overall Performance:* ${gradeLabel}
+
+We encourage you to discuss these results with your child.
+Warm regards,
+Class Teacher (AcaTier)`;
+}
+
+// ─── Setup tab switching UI listeners ─────────────────────
+const tabEmailBtn = document.getElementById('tab-email');
+const tabWhatsappBtn = document.getElementById('tab-whatsapp');
+const panelEmail = document.getElementById('panel-email');
+const panelWhatsapp = document.getElementById('panel-whatsapp');
+
+if (tabEmailBtn && tabWhatsappBtn && panelEmail && panelWhatsapp) {
+  tabEmailBtn.addEventListener('click', () => {
+    tabEmailBtn.classList.add('active');
+    tabWhatsappBtn.classList.remove('active');
+    tabEmailBtn.style.color = 'var(--accent-blue)';
+    tabEmailBtn.style.borderBottomColor = 'var(--accent-blue)';
+    tabWhatsappBtn.style.color = 'var(--text-secondary)';
+    tabWhatsappBtn.style.borderBottomColor = 'transparent';
+    panelEmail.style.display = 'flex';
+    panelWhatsapp.style.display = 'none';
+  });
+
+  tabWhatsappBtn.addEventListener('click', () => {
+    tabWhatsappBtn.classList.add('active');
+    tabEmailBtn.classList.remove('active');
+    tabWhatsappBtn.style.color = 'var(--accent-blue)';
+    tabWhatsappBtn.style.borderBottomColor = 'var(--accent-blue)';
+    tabEmailBtn.style.color = 'var(--text-secondary)';
+    tabEmailBtn.style.borderBottomColor = 'transparent';
+    panelWhatsapp.style.display = 'flex';
+    panelEmail.style.display = 'none';
+  });
+}
+
+// Twilio inputs expand/collapse logic
+const whatsappModeSelect = document.getElementById('whatsapp-delivery-mode');
+const twilioFieldsContainer = document.getElementById('twilio-fields-container');
+const directFieldsContainer = document.getElementById('direct-fields-container');
+
+if (whatsappModeSelect) {
+  whatsappModeSelect.addEventListener('change', () => {
+    if (whatsappModeSelect.value === 'twilio') {
+      if (twilioFieldsContainer) twilioFieldsContainer.style.display = 'flex';
+      if (directFieldsContainer) directFieldsContainer.style.display = 'none';
+    } else {
+      if (twilioFieldsContainer) twilioFieldsContainer.style.display = 'none';
+      if (directFieldsContainer) directFieldsContainer.style.display = 'flex';
+    }
+  });
+}
+
 // ─── Init ─────────────────────────────────────────
 document.getElementById('student-board').addEventListener('change', updateFormSubjects);
 document.getElementById('student-class').addEventListener('change', updateFormSubjects);
 document.getElementById('student-group').addEventListener('change', updateFormSubjects);
 document.getElementById('filter-class').addEventListener('change', () => { renderTable(); });
 updateFormSubjects();
+loadSavedCredentials();
 checkAuthOnLoad();

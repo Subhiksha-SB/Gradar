@@ -12,7 +12,7 @@ from flask_cors import CORS
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
 from models import Student, Admin, db
-from email_service import send_report_email, verify_credentials
+from email_service import send_report_email, verify_credentials, send_report_whatsapp
 
 # ─────────────────────────────────────────────
 # App setup
@@ -172,11 +172,12 @@ def add_student(current_admin):
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    name         = data.get("name", "").strip()
-    parent_email = data.get("parent_email", "").strip()
-    marks        = data.get("marks", [])
-    grade        = str(data.get("grade", "10")).strip()
-    group        = data.get("group")
+    name            = data.get("name", "").strip()
+    parent_email    = data.get("parent_email", "").strip()
+    parent_whatsapp = data.get("parent_whatsapp", "").strip()
+    marks           = data.get("marks", [])
+    grade           = str(data.get("grade", "10")).strip()
+    group           = data.get("group")
     if group:
         group = str(group).strip()
     board        = str(data.get("board", "State Board") or "State Board").strip()
@@ -192,7 +193,7 @@ def add_student(current_admin):
     total   = sum(marks)
     average = total / len(marks)
 
-    student = Student(name=name, parent_email=parent_email,
+    student = Student(name=name, parent_email=parent_email, parent_whatsapp=parent_whatsapp,
                       total=total, average=average,
                       grade=grade, group=group, board=board)
     student.marks = marks
@@ -273,13 +274,18 @@ def verify_creds(current_admin):
     return jsonify(result), 200 if result["success"] else 401
 
 
-# POST /api/send-emails  — send emails to ALL parents (Protected)
+# POST /api/send-emails  — send emails and WhatsApps to ALL parents (Protected)
 @app.route("/api/send-emails", methods=["POST"])
 @token_required
 def send_emails(current_admin):
     data = request.get_json()
     sender_email    = (data or {}).get("sender_email", "").strip()
     sender_password = (data or {}).get("sender_password", "").strip()
+    
+    twilio_sid    = (data or {}).get("twilio_sid", "").strip()
+    twilio_token  = (data or {}).get("twilio_token", "").strip()
+    twilio_sender = (data or {}).get("twilio_sender", "").strip()
+    whatsapp_mode = (data or {}).get("whatsapp_mode", "direct").strip()
 
     if not sender_email or not sender_password:
         return jsonify({"error": "sender_email and sender_password are required"}), 400
@@ -293,13 +299,26 @@ def send_emails(current_admin):
         result = send_report_email(s.to_dict(), sender_email, sender_password)
         if result["success"]:
             s.email_sent = True
-        results.append({"student": s.name, **result})
+        
+        # WhatsApp delivery if Twilio automated mode is configured
+        wa_msg = ""
+        if whatsapp_mode == "twilio" and twilio_sid and twilio_token and twilio_sender:
+            wa_res = send_report_whatsapp(s.to_dict(), twilio_sid, twilio_token, twilio_sender)
+            if wa_res["success"]:
+                s.whatsapp_sent = True
+            wa_msg = f" | WhatsApp: {wa_res['message']}"
+
+        results.append({
+            "student": s.name,
+            "success": result["success"],
+            "message": result["message"] + wa_msg
+        })
 
     db.session.commit()
     return jsonify({"results": results})
 
 
-# POST /api/send-email/<id>  — send email to ONE parent (Protected)
+# POST /api/send-email/<id>  — send email and WhatsApp to ONE parent (Protected)
 @app.route("/api/send-email/<int:student_id>", methods=["POST"])
 @token_required
 def send_single_email(current_admin, student_id):
@@ -307,6 +326,11 @@ def send_single_email(current_admin, student_id):
     data = request.get_json()
     sender_email    = (data or {}).get("sender_email", "").strip()
     sender_password = (data or {}).get("sender_password", "").strip()
+    
+    twilio_sid    = (data or {}).get("twilio_sid", "").strip()
+    twilio_token  = (data or {}).get("twilio_token", "").strip()
+    twilio_sender = (data or {}).get("twilio_sender", "").strip()
+    whatsapp_mode = (data or {}).get("whatsapp_mode", "direct").strip()
 
     if not sender_email or not sender_password:
         return jsonify({"error": "sender_email and sender_password are required"}), 400
@@ -314,9 +338,31 @@ def send_single_email(current_admin, student_id):
     result = send_report_email(student.to_dict(), sender_email, sender_password)
     if result["success"]:
         student.email_sent = True
-        db.session.commit()
 
-    return jsonify({"student": student.name, **result})
+    # WhatsApp delivery if Twilio automated mode is configured
+    wa_msg = ""
+    if whatsapp_mode == "twilio" and twilio_sid and twilio_token and twilio_sender:
+        wa_res = send_report_whatsapp(student.to_dict(), twilio_sid, twilio_token, twilio_sender)
+        if wa_res["success"]:
+            student.whatsapp_sent = True
+        wa_msg = f" | WhatsApp: {wa_res['message']}"
+
+    db.session.commit()
+    return jsonify({
+        "student": student.name,
+        "success": result["success"],
+        "message": result["message"] + wa_msg
+    })
+
+
+# POST /api/students/<id>/whatsapp-sent  — mark whatsapp as sent manually (Protected)
+@app.route("/api/students/<int:student_id>/whatsapp-sent", methods=["POST"])
+@token_required
+def mark_whatsapp_sent(current_admin, student_id):
+    student = Student.query.get_or_404(student_id)
+    student.whatsapp_sent = True
+    db.session.commit()
+    return jsonify({"success": True, "student": student.name})
 
 
 # GET /api/export-csv  — download CSV (Protected via query token)
@@ -339,7 +385,7 @@ def export_csv():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Rank", "Name", "Board", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Email Sent"])
+    writer.writerow(["Rank", "Name", "Board", "Class", "Group", "Marks", "Total", "Average", "Parent Email", "Email Sent", "Parent WhatsApp", "WhatsApp Sent"])
 
     for s in students:
         writer.writerow([
@@ -353,6 +399,8 @@ def export_csv():
             f"{s.average:.2f}",
             s.parent_email,
             "Yes" if s.email_sent else "No",
+            s.parent_whatsapp or "",
+            "Yes" if s.whatsapp_sent else "No",
         ])
 
     output.seek(0)

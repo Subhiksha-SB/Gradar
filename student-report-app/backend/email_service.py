@@ -377,3 +377,105 @@ def send_report_email(student: dict,
         return {"success": False, "message": f"SMTP error: {exc}"}
     except Exception as exc:
         return {"success": False, "message": f"Unexpected error: {exc}"}
+
+
+# ─────────────────────────────────────────────
+# WhatsApp Formatter & Delivery Service
+# ─────────────────────────────────────────────
+
+def _build_whatsapp_body(student: dict) -> str:
+    """Build a rich formatted markdown body for WhatsApp."""
+    marks     = student["marks"]
+    total_max = len(marks) * 100
+    avg       = student["average"]
+    g_lbl     = _grade_label(avg)
+
+    subjects = get_subjects_for_class(student.get("grade"), student.get("group"), student.get("board", "State Board"))
+    icons = get_icons_for_class(student.get("grade"), student.get("group"), student.get("board", "State Board"))
+    
+    subject_lines = []
+    for name, icon, mark in zip(subjects, icons, marks):
+        subject_lines.append(f"{icon} *{name.split(' / ')[0]}*: {mark} / 100")
+        
+    subject_text = "\n".join(subject_lines)
+
+    msg = f"""*AcaTier Academic Performance Report* 🎓
+
+Dear Parent,
+Here is the academic performance report for your child *{student['name']}* (Class {student.get('grade', '10')}{' - ' + student.get('group') + ' Group' if student.get('group') else ''}):
+
+*SUBJECT-WISE MARKS*
+{subject_text}
+
+*SUMMARY*
+🏆 *Class Rank:* #{student['rank']}
+📊 *Total Score:* {student['total']} / {total_max}
+📈 *Average:* {avg:.1f}%
+🌟 *Overall Performance:* {g_lbl}
+
+We encourage you to discuss these results with your child.
+Warm regards,
+Class Teacher (AcaTier)"""
+    return msg
+
+
+def send_report_whatsapp(student: dict,
+                         twilio_sid: str,
+                         twilio_token: str,
+                         twilio_sender: str) -> dict:
+    """
+    Send a rich markdown report card to parent's WhatsApp via Twilio.
+    """
+    import urllib.request
+    import urllib.parse
+    import json
+    import base64
+
+    phone = student.get("parent_whatsapp", "").strip()
+    if not phone:
+        return {"success": False, "message": "No parent WhatsApp number configured."}
+
+    # Format phone with '+' if it isn't already
+    if phone.isdigit():
+        phone = "+" + phone
+    elif not phone.startswith("+"):
+        phone = "+" + phone.lstrip()
+
+    # Twilio API URL
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{twilio_sid}/Messages.json"
+    
+    body_text = _build_whatsapp_body(student)
+    
+    # Twilio form data parameters
+    data = urllib.parse.urlencode({
+        "From": f"whatsapp:{twilio_sender}",
+        "To": f"whatsapp:{phone}",
+        "Body": body_text
+    }).encode("utf-8")
+    
+    req = urllib.request.Request(url, data=data, method="POST")
+    
+    # HTTP Basic Authentication
+    auth_str = f"{twilio_sid}:{twilio_token}"
+    auth_b64 = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+    req.add_header("Authorization", f"Basic {auth_b64}")
+    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_body = response.read().decode("utf-8")
+            res_json = json.loads(res_body)
+            if response.status in [200, 201]:
+                return {"success": True, "message": f"WhatsApp sent successfully to {phone}"}
+            else:
+                return {"success": False, "message": f"Twilio API Error: {res_json.get('message')}"}
+    except Exception as e:
+        if hasattr(e, "read"):
+            try:
+                err_body = e.read().decode("utf-8")
+                err_json = json.loads(err_body)
+                return {"success": False, "message": f"Twilio Error: {err_json.get('message', str(e))}"}
+            except Exception:
+                pass
+        return {"success": False, "message": f"WhatsApp failed: {str(e)}"}
+

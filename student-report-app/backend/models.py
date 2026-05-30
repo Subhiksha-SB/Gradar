@@ -29,17 +29,19 @@ class Admin(db.Model):
 class Student(db.Model):
     __tablename__ = "students"
 
-    id            = db.Column(db.Integer, primary_key=True)
-    name          = db.Column(db.String(100), nullable=False)
-    parent_email  = db.Column(db.String(150), nullable=False)
-    _marks        = db.Column("marks", db.Text, nullable=False)   # stored as JSON
-    total         = db.Column(db.Float, nullable=False)
-    average       = db.Column(db.Float, nullable=False)
-    rank          = db.Column(db.Integer, nullable=True)
-    email_sent    = db.Column(db.Boolean, default=False)
-    grade         = db.Column(db.String(50), nullable=False, default="10")
-    group         = db.Column(db.String(100), nullable=True)
-    board         = db.Column(db.String(50), nullable=True, default="State Board")
+    id              = db.Column(db.Integer, primary_key=True)
+    name            = db.Column(db.String(100), nullable=False)
+    parent_email    = db.Column(db.String(150), nullable=False)
+    parent_whatsapp = db.Column(db.String(30), nullable=True)
+    _marks          = db.Column("marks", db.Text, nullable=False)   # stored as JSON
+    total           = db.Column(db.Float, nullable=False)
+    average         = db.Column(db.Float, nullable=False)
+    rank            = db.Column(db.Integer, nullable=True)
+    email_sent      = db.Column(db.Boolean, default=False)
+    whatsapp_sent   = db.Column(db.Boolean, default=False)
+    grade           = db.Column(db.String(50), nullable=False, default="10")
+    group           = db.Column(db.String(100), nullable=True)
+    board           = db.Column(db.String(50), nullable=True, default="State Board")
 
     # ------- marks property (serialize / deserialize) -------
     @property
@@ -52,15 +54,17 @@ class Student(db.Model):
 
     def to_dict(self):
         return {
-            "id":           self.id,
-            "name":         self.name,
-            "parent_email": self.parent_email,
-            "marks":        self.marks,
-            "total":        self.total,
-            "average":      round(self.average, 2),
-            "rank":         self.rank,
-            "email_sent":   self.email_sent,
-            "grade":        self.grade,
-            "group":        self.group,
-            "board":        self.board or "State Board",
+            "id":              self.id,
+            "name":            self.name,
+            "parent_email":    self.parent_email,
+            "parent_whatsapp": self.parent_whatsapp or "",
+            "marks":           self.marks,
+            "total":           self.total,
+            "average":         round(self.average, 2),
+            "rank":            self.rank,
+            "email_sent":      self.email_sent,
+            "whatsapp_sent":   self.whatsapp_sent,
+            "grade":           self.grade,
+            "group":           self.group,
+            "board":           self.board or "State Board",
         }

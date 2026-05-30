@@ -33,12 +33,19 @@
       </div>
     </div>
     <div class="navbar-actions">
+      <button id="theme-toggle" class="theme-toggle" title="Toggle light/dark theme" aria-label="Toggle theme">🌙</button>
       <div class="nav-admin-profile" id="nav-admin-profile" style="display: none;">
-        <div class="admin-avatar" id="admin-avatar">A</div>
-        <span class="admin-name" id="admin-name">Admin</span>
+        <div class="admin-profile-trigger" id="admin-profile-trigger">
+          <div class="admin-avatar" id="admin-avatar">A</div>
+          <span class="admin-name" id="admin-name">Admin</span>
+          <span class="dropdown-caret">▼</span>
+        </div>
+        <div class="admin-dropdown" id="admin-dropdown">
+          <button id="setup-btn" class="dropdown-item">⚙️ Delivery Setup</button>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn" class="dropdown-item logout">🚪 Log Out</button>
+        </div>
       </div>
-      <button id="logout-btn" class="btn btn-logout" style="display: none;">🚪 Log Out</button>
-      <button id="setup-btn" class="btn btn-ghost">⚙️ Delivery Setup</button>
       <button id="export-csv-btn" class="btn btn-ghost">📥 Export CSV</button>
       <button id="send-all-btn" class="btn btn-violet">
         <span class="spinner" aria-hidden="true"></span>
@@ -58,12 +65,12 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon">📊</div>
-        <div class="stat-value" id="stat-avg">—</div>
+        <div class="stat-value" id="stat-avg">N/A</div>
         <div class="stat-label">Class Average</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">🏆</div>
-        <div class="stat-value" id="stat-top" style="font-size:1.15rem">—</div>
+        <div class="stat-value" id="stat-top">N/A</div>
         <div class="stat-label">Top Performer</div>
       </div>
       <div class="stat-card">
@@ -249,7 +256,38 @@
           </div>
 
           <div id="empty-state" class="empty-state">
-            <div class="empty-icon">📋</div>
+            <div class="empty-illustration-wrap">
+              <svg class="empty-illustration" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Glow background -->
+                <circle cx="100" cy="100" r="50" fill="url(#empty-glow)" opacity="0.15" />
+                <!-- Floating book and lines -->
+                <path d="M60 140V70C60 64.4772 64.4772 60 70 60H130C135.523 60 140 64.4772 140 70V140" stroke="url(#empty-grad-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="float-anim" />
+                <path d="M60 140C60 134.477 64.4772 130 70 130H130C135.523 130 140 134.477 140 140" stroke="url(#empty-grad-green)" stroke-width="2" />
+                <!-- Page lines -->
+                <line x1="80" y1="80" x2="120" y2="80" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+                <line x1="80" y1="95" x2="110" y2="95" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+                <line x1="80" y1="110" x2="115" y2="110" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+                <!-- Sparkles / Stars -->
+                <path d="M155 55L157 62L164 64L157 66L155 73L153 66L146 64L153 62L155 55Z" fill="#25D366" class="pulse-anim" />
+                <path d="M45 95L46.5 100L51.5 101.5L46.5 103L45 108L43.5 103L38.5 101.5L43.5 100L45 95Z" fill="#a855f7" class="pulse-anim-delay" />
+                <path d="M140 120L141 123L144 124L141 125L140 128L139 125L136 124L139 123L140 120Z" fill="#63b3ed" class="pulse-anim" />
+                <!-- Definitions -->
+                <defs>
+                  <radialGradient id="empty-glow" cx="50%" cy="50%" r="50%">
+                     <stop offset="0%" stop-color="#a855f7" />
+                     <stop offset="100%" stop-color="transparent" />
+                  </radialGradient>
+                  <linearGradient id="empty-grad-purple" x1="60" y1="60" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#a855f7" />
+                    <stop offset="100%" stop-color="#63b3ed" />
+                  </linearGradient>
+                  <linearGradient id="empty-grad-green" x1="60" y1="130" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#25D366" />
+                    <stop offset="100%" stop-color="#4fd1c5" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
             <div class="empty-title">No Students Yet</div>
             <div class="empty-text">Add your first student using the form on the left.</div>
           </div>

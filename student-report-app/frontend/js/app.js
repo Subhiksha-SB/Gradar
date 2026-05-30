@@ -344,8 +344,8 @@ async function fetchSummary() {
     const res  = await authFetch(`${API}/summary`);
     const data = await res.json();
     document.getElementById('stat-total').textContent   = data.total_students;
-    document.getElementById('stat-avg').textContent     = data.class_average ? `${data.class_average}%` : '—';
-    document.getElementById('stat-top').textContent     = data.top_student ? data.top_student.name.split(' ')[0] : '—';
+    document.getElementById('stat-avg').textContent     = data.class_average ? `${data.class_average}%` : 'N/A';
+    document.getElementById('stat-top').textContent     = data.top_student ? data.top_student.name.split(' ')[0] : 'N/A';
     document.getElementById('stat-emailed').textContent = students.filter(s => s.email_sent).length;
     renderGradeChart(data.grade_distribution, data.total_students);
   } catch { /* silent */ }
@@ -1132,8 +1132,8 @@ if (tabEmailBtn && tabWhatsappBtn && panelEmail && panelWhatsapp) {
   tabWhatsappBtn.addEventListener('click', () => {
     tabWhatsappBtn.classList.add('active');
     tabEmailBtn.classList.remove('active');
-    tabWhatsappBtn.style.color = 'var(--accent-blue)';
-    tabWhatsappBtn.style.borderBottomColor = 'var(--accent-blue)';
+    tabWhatsappBtn.style.color = '#25D366'; /* Classic WhatsApp Green */
+    tabWhatsappBtn.style.borderBottomColor = '#25D366';
     tabEmailBtn.style.color = 'var(--text-secondary)';
     tabEmailBtn.style.borderBottomColor = 'transparent';
     panelWhatsapp.style.display = 'flex';
@@ -1158,7 +1158,43 @@ if (whatsappModeSelect) {
   });
 }
 
+// ─── Admin Dropdown Toggle ────────────────────────
+const adminProfileTrigger = document.getElementById('admin-profile-trigger');
+const adminDropdown = document.getElementById('admin-dropdown');
+if (adminProfileTrigger && adminDropdown) {
+  adminProfileTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    adminDropdown.classList.toggle('active');
+  });
+  document.addEventListener('click', () => {
+    adminDropdown.classList.remove('active');
+  });
+}
+
+// ─── Theme Toggle (Light/Dark) ──────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('acatier_theme');
+  const toggle = document.getElementById('theme-toggle');
+  if (saved === 'light') {
+    document.body.classList.add('light-theme');
+    if (toggle) toggle.textContent = '☀️';
+  } else {
+    document.body.classList.remove('light-theme');
+    if (toggle) toggle.textContent = '🌙';
+  }
+}
+
+const themeToggleBtn = document.getElementById('theme-toggle');
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-theme');
+    localStorage.setItem('acatier_theme', isLight ? 'light' : 'dark');
+    themeToggleBtn.textContent = isLight ? '☀️' : '🌙';
+  });
+}
+
 // ─── Init ─────────────────────────────────────────
+initTheme();
 document.getElementById('student-board').addEventListener('change', updateFormSubjects);
 document.getElementById('student-class').addEventListener('change', updateFormSubjects);
 document.getElementById('student-group').addEventListener('change', updateFormSubjects);

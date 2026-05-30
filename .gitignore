@@ -20,3 +20,5 @@ student-report-app/backend/instance/
 .idea/
 .DS_Store
 Thumbs.db
+
+.vercel

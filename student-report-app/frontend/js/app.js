@@ -116,23 +116,7 @@ function setToken(token) {
 }
 
 async function authFetch(url, options = {}) {
-  const token = getToken();
-  options.headers = options.headers || {};
-  if (token) {
-    options.headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const res = await fetch(url, options);
-  
-  if (res.status === 401) {
-    const clone = res.clone();
-    const data = await clone.json().catch(() => ({}));
-    if (data.code === 'TOKEN_EXPIRED') {
-      toast('warning', 'Session Expired', 'Your admin session has expired. Please sign in again.');
-    }
-    logoutAdmin();
-  }
-  return res;
+  return fetch(url, options);
 }
 
 // ─── Credentials state ────────────────────────────
@@ -908,31 +892,28 @@ teacherModal.addEventListener('click', e => {
 // ─── Export CSV ───────────────────────────────────
 document.getElementById('export-csv-btn').addEventListener('click', () => {
   if (!students.length) { toast('info', 'No Data', 'Add students before exporting.'); return; }
-  window.location.href = `${API}/export-csv?token=${encodeURIComponent(getToken() || '')}`;
+  window.location.href = `${API}/export-csv`;
   toast('success', 'Downloading', 'CSV file is being downloaded.');
 });
 
 // ─── Admin Authentication handlers ────────────────
 async function checkAuthOnLoad() {
-  const token = getToken();
-  if (!token) {
-    showLoginScreen();
-    return;
-  }
+  const loginOverlay = document.getElementById('login-screen-overlay');
+  if (loginOverlay) loginOverlay.classList.remove('active');
   
-  try {
-    const res = await fetch(`${API}/auth/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      loginAdminSuccess(data.admin);
-    } else {
-      logoutAdmin();
-    }
-  } catch {
-    showLoginScreen();
-  }
+  // Show admin UI info
+  const profile = document.getElementById('nav-admin-profile');
+  const logout = document.getElementById('logout-btn');
+  const nameEl = document.getElementById('admin-name');
+  const avatarEl = document.getElementById('admin-avatar');
+  
+  if (profile) profile.style.display = 'flex';
+  if (logout) logout.style.display = 'none'; // Keep logout hidden as auth is disabled
+  if (nameEl) nameEl.textContent = 'Admin';
+  if (avatarEl) avatarEl.textContent = 'A';
+  
+  // Fetch dashboard data
+  fetchStudents();
 }
 
 function showLoginScreen() {
@@ -955,7 +936,7 @@ function loginAdminSuccess(admin) {
   const avatarEl = document.getElementById('admin-avatar');
   
   if (profile) profile.style.display = 'flex';
-  if (logout) logout.style.display = 'inline-flex';
+  if (logout) logout.style.display = 'none'; // Keep logout hidden
   if (nameEl) nameEl.textContent = admin.username;
   if (avatarEl) avatarEl.textContent = admin.username.charAt(0).toUpperCase();
   

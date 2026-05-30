@@ -78,28 +78,14 @@ def _recalculate_ranks():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth_header = request.headers.get("Authorization")
-        if not auth_header:
-            return jsonify({"error": "Token is missing", "code": "UNAUTHORIZED"}), 401
-        
-        parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            return jsonify({"error": "Invalid Authorization header format", "code": "UNAUTHORIZED"}), 401
-        
-        token = parts[1]
-        try:
-            # Token valid for 2 hours (7200 seconds)
-            data = serializer.loads(token, max_age=7200)
-            current_admin = Admin.query.get(data["admin_id"])
-            if not current_admin:
-                return jsonify({"error": "Admin user not found", "code": "UNAUTHORIZED"}), 401
-        except SignatureExpired:
-            return jsonify({"error": "Token has expired", "code": "TOKEN_EXPIRED"}), 401
-        except BadSignature:
-            return jsonify({"error": "Invalid token", "code": "UNAUTHORIZED"}), 401
-        except Exception:
-            return jsonify({"error": "Authentication error", "code": "UNAUTHORIZED"}), 401
-        
+        # Authentication bypassed - automatically select the first admin in the database
+        current_admin = Admin.query.first()
+        if not current_admin:
+            # Fallback admin if none seeded yet
+            current_admin = Admin(username="admin", email="admin@acatier.local")
+            current_admin.set_password("admin123")
+            db.session.add(current_admin)
+            db.session.commit()
         return f(current_admin, *args, **kwargs)
     return decorated
 
@@ -365,21 +351,9 @@ def mark_whatsapp_sent(current_admin, student_id):
     return jsonify({"success": True, "student": student.name})
 
 
-# GET /api/export-csv  — download CSV (Protected via query token)
+# GET /api/export-csv  — download CSV (Public access)
 @app.route("/api/export-csv", methods=["GET"])
 def export_csv():
-    token = request.args.get("token")
-    if not token:
-        return jsonify({"error": "Token is missing", "code": "UNAUTHORIZED"}), 401
-    try:
-        data = serializer.loads(token, max_age=7200)
-        current_admin = Admin.query.get(data["admin_id"])
-        if not current_admin:
-            return jsonify({"error": "Admin user not found", "code": "UNAUTHORIZED"}), 401
-    except SignatureExpired:
-        return jsonify({"error": "Token has expired", "code": "TOKEN_EXPIRED"}), 401
-    except Exception:
-        return jsonify({"error": "Invalid or expired token", "code": "UNAUTHORIZED"}), 401
 
     students = Student.query.order_by(Student.rank).all()
 
